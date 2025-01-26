@@ -42,6 +42,8 @@ class LCD_Meeting_Notes {
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('wp_ajax_lcd_export_meeting_pdf', array($this, 'handle_pdf_export'));
         add_action('wp_ajax_lcd_generate_meeting_email', array($this, 'handle_email_generation'));
+        add_action('wp_ajax_lcd_search_people', array($this, 'ajax_search_people'));
+        add_action('wp_ajax_lcd_create_person', array($this, 'ajax_create_person'));
         add_action('after_switch_theme', array($this, 'add_default_meeting_locations'));
         add_action('edit_form_after_title', array($this, 'add_date_field'));
         add_action('admin_notices', array($this, 'show_validation_notice'));
@@ -393,6 +395,61 @@ class LCD_Meeting_Notes {
     }
 
     /**
+     * Check if LCD People plugin is active
+     */
+    private function is_people_plugin_active() {
+        return class_exists('LCD_People');
+    }
+
+    /**
+     * AJAX handler for people search
+     */
+    public function ajax_search_people() {
+        check_ajax_referer('lcd_meeting_notes_nonce', 'nonce');
+
+        if (!current_user_can('edit_posts')) {
+            wp_die(-1);
+        }
+
+        $search = sanitize_text_field($_GET['q']);
+        $results = array();
+
+        if ($this->is_people_plugin_active()) {
+            // Search for existing people records
+            $args = array(
+                'post_type' => 'lcd_person',
+                'posts_per_page' => 10,
+                's' => $search,
+                'orderby' => 'title',
+                'order' => 'ASC'
+            );
+
+            $query = new WP_Query($args);
+
+            if ($query->have_posts()) {
+                while ($query->have_posts()) {
+                    $query->the_post();
+                    $results[] = array(
+                        'id' => 'person_' . get_the_ID(),
+                        'text' => get_the_title(),
+                        'type' => 'person'
+                    );
+                }
+            }
+            wp_reset_postdata();
+        }
+
+        // Always add the search term as a free text option
+        $results[] = array(
+            'id' => 'text_' . $search,
+            'text' => $search,
+            'type' => 'free_text'
+        );
+
+        wp_send_json($results);
+    }
+
+    /**
      * Add date field after title
      */
     public function add_date_field($post) {
@@ -418,15 +475,89 @@ class LCD_Meeting_Notes {
      * Meeting details callback
      */
     public function meeting_details_callback($post) {
-        // Note: nonce is already added in add_date_field
+        wp_nonce_field('lcd_meeting_notes_nonce', 'meeting_notes_nonce');
+        
         $attendees = get_post_meta($post->ID, '_attendees', true);
+        $attendee_array = array_filter(array_map('trim', explode(',', $attendees)));
         ?>
         <div class="meeting-details-fields">
             <p>
-                <label for="attendees"><strong><?php _e('Attendees', 'lcd-meeting-notes'); ?></strong></label><br>
-                <textarea id="attendees" name="attendees" class="widefat" rows="3" placeholder="<?php _e('Enter attendee names, one per line or comma-separated', 'lcd-meeting-notes'); ?>"><?php echo esc_textarea($attendees); ?></textarea>
+                <label for="attendees_select"><strong><?php _e('Attendees', 'lcd-meeting-notes'); ?></strong></label><br>
+                <select id="attendees_select" class="widefat" multiple="multiple">
+                    <?php
+                    foreach ($attendee_array as $attendee) {
+                        echo sprintf(
+                            '<option value="%s" selected="selected">%s</option>',
+                            esc_attr($attendee),
+                            esc_html($attendee)
+                        );
+                    }
+                    ?>
+                </select>
+                <input type="hidden" name="attendees" id="attendees" value="<?php echo esc_attr($attendees); ?>">
+                <p class="description"><?php _e('Start typing to search for people or enter new names', 'lcd-meeting-notes'); ?></p>
             </p>
         </div>
+
+        <!-- Modal for new person -->
+        <div id="new-person-modal" style="display: none;" class="lcd-modal">
+            <div class="lcd-modal-content">
+                <h3><?php _e('Add New Person', 'lcd-meeting-notes'); ?></h3>
+                <div class="lcd-modal-body">
+                    <p>
+                        <label for="new_person_first_name"><?php _e('First Name', 'lcd-meeting-notes'); ?></label><br>
+                        <input type="text" id="new_person_first_name" class="widefat">
+                    </p>
+                    <p>
+                        <label for="new_person_last_name"><?php _e('Last Name', 'lcd-meeting-notes'); ?></label><br>
+                        <input type="text" id="new_person_last_name" class="widefat">
+                    </p>
+                </div>
+                <div class="lcd-modal-footer">
+                    <button type="button" class="button button-primary" id="save-new-person"><?php _e('Add Person', 'lcd-meeting-notes'); ?></button>
+                    <button type="button" class="button" id="cancel-new-person"><?php _e('Cancel', 'lcd-meeting-notes'); ?></button>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .select2-container {
+                width: 100% !important;
+            }
+            .select2-results__option--person {
+                color: #2271b1;
+            }
+            .select2-results__option--free-text {
+                font-style: italic;
+            }
+            .lcd-modal {
+                display: none;
+                position: fixed;
+                z-index: 100000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0,0,0,0.4);
+            }
+            .lcd-modal-content {
+                background-color: #fefefe;
+                margin: 15% auto;
+                padding: 20px;
+                border: 1px solid #ddd;
+                width: 400px;
+                max-width: 90%;
+                border-radius: 4px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+            .lcd-modal-footer {
+                margin-top: 20px;
+                text-align: right;
+            }
+            .lcd-modal-footer .button {
+                margin-left: 10px;
+            }
+        </style>
         <?php
     }
 
@@ -547,10 +678,27 @@ class LCD_Meeting_Notes {
         if ($hook == 'post-new.php' || $hook == 'post.php') {
             if (isset($post) && $post->post_type == 'meeting_notes') {
                 wp_enqueue_script('jquery');
+
+                // Enqueue Select2
+                wp_enqueue_style(
+                    'select2',
+                    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
+                    array(),
+                    '4.1.0-rc.0'
+                );
+                
+                wp_enqueue_script(
+                    'select2',
+                    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
+                    array('jquery'),
+                    '4.1.0-rc.0',
+                    true
+                );
+
                 wp_enqueue_script(
                     'lcd-meeting-notes-admin',
                     plugins_url('assets/js/admin.js', __FILE__),
-                    array('jquery'),
+                    array('jquery', 'select2'),
                     '1.0.0',
                     true
                 );
@@ -562,7 +710,14 @@ class LCD_Meeting_Notes {
                     'sending' => __('Sending...', 'lcd-meeting-notes'),
                     'sendEmail' => __('Send Email', 'lcd-meeting-notes'),
                     'downloadPDF' => __('Download PDF', 'lcd-meeting-notes'),
-                    'previewPDF' => __('Preview PDF', 'lcd-meeting-notes')
+                    'previewPDF' => __('Preview PDF', 'lcd-meeting-notes'),
+                    'ajaxurl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('lcd_meeting_notes_nonce'),
+                    'peopleLookupEnabled' => $this->is_people_plugin_active(),
+                    'searchPlaceholder' => __('Type to search for people or enter names...', 'lcd-meeting-notes'),
+                    'modalTitle' => __('Add New Person', 'lcd-meeting-notes'),
+                    'firstNameRequired' => __('First name is required', 'lcd-meeting-notes'),
+                    'lastNameRequired' => __('Last name is required', 'lcd-meeting-notes')
                 ));
             }
         }
@@ -609,6 +764,42 @@ class LCD_Meeting_Notes {
 
         wp_redirect(admin_url('edit.php?post_type=meeting_notes&fpdf_installed=1'));
         exit;
+    }
+
+    public function ajax_create_person() {
+        check_ajax_referer('lcd_meeting_notes_nonce', 'nonce');
+
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(array('message' => __('Permission denied', 'lcd-meeting-notes')));
+        }
+
+        $first_name = sanitize_text_field($_POST['first_name']);
+        $last_name = sanitize_text_field($_POST['last_name']);
+
+        if (empty($first_name) || empty($last_name)) {
+            wp_send_json_error(array('message' => __('First and last name are required', 'lcd-meeting-notes')));
+        }
+
+        // Create new person post
+        $person_id = wp_insert_post(array(
+            'post_type' => 'lcd_person',
+            'post_status' => 'publish',
+            'post_title' => $first_name . ' ' . $last_name
+        ));
+
+        if (is_wp_error($person_id)) {
+            wp_send_json_error(array('message' => $person_id->get_error_message()));
+        }
+
+        // Add first and last name meta
+        update_post_meta($person_id, '_lcd_person_first_name', $first_name);
+        update_post_meta($person_id, '_lcd_person_last_name', $last_name);
+
+        wp_send_json_success(array(
+            'id' => 'person_' . $person_id,
+            'text' => $first_name . ' ' . $last_name,
+            'type' => 'person'
+        ));
     }
 }
 
