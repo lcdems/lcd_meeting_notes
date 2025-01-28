@@ -162,15 +162,6 @@ class LCD_Meeting_Notes {
      */
     public function add_meta_boxes() {
         add_meta_box(
-            'meeting_date_time',
-            __('Meeting Date & Time', 'lcd-meeting-notes'),
-            array($this, 'meeting_date_time_callback'),
-            'meeting_notes',
-            'normal',
-            'high'
-        );
-
-        add_meta_box(
             'meeting_attendees',
             __('Attendees', 'lcd-meeting-notes'),
             array($this, 'meeting_attendees_callback'),
@@ -196,61 +187,6 @@ class LCD_Meeting_Notes {
             'side',
             'default'
         );
-    }
-
-    /**
-     * Meeting date and time callback
-     */
-    public function meeting_date_time_callback($post) {
-        wp_nonce_field('lcd_meeting_notes_nonce', 'meeting_notes_nonce');
-        
-        $meeting_date = get_post_meta($post->ID, '_meeting_date', true);
-        $meeting_time = get_post_meta($post->ID, '_meeting_time', true);
-        ?>
-        <div class="meeting-date-time-wrapper">
-            <div class="meeting-date-field">
-                <label for="meeting_date"><?php _e('Meeting Date:', 'lcd-meeting-notes'); ?></label>
-                <input type="date" 
-                       id="meeting_date" 
-                       name="meeting_date" 
-                       value="<?php echo esc_attr($meeting_date); ?>" 
-                       required>
-            </div>
-            <div class="meeting-time-field">
-                <label for="meeting_time"><?php _e('Meeting Time:', 'lcd-meeting-notes'); ?></label>
-                <input type="time" 
-                       id="meeting_time" 
-                       name="meeting_time" 
-                       value="<?php echo esc_attr($meeting_time); ?>" 
-                       required>
-            </div>
-        </div>
-
-        <style>
-            .meeting-date-time-wrapper {
-                padding: 10px 0;
-                display: flex;
-                gap: 20px;
-                align-items: flex-end;
-            }
-            .meeting-date-field,
-            .meeting-time-field {
-                flex: 0 0 auto;
-            }
-            .meeting-date-field label,
-            .meeting-time-field label {
-                display: block;
-                font-weight: 600;
-                margin-bottom: 5px;
-            }
-            #meeting_date,
-            #meeting_time {
-                padding: 5px;
-                border: 1px solid #8c8f94;
-                border-radius: 4px;
-            }
-        </style>
-        <?php
     }
 
     /**
