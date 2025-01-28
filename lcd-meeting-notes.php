@@ -61,7 +61,6 @@ class LCD_Meeting_Notes {
         add_action('wp_ajax_lcd_search_people', array($this, 'ajax_search_people'));
         add_action('wp_ajax_lcd_create_person', array($this, 'ajax_create_person'));
         add_action('wp_ajax_upload_agenda_pdf', array($this, 'handle_agenda_pdf_upload'));
-        add_action('after_switch_theme', array($this, 'add_default_meeting_locations'));
         add_action('edit_form_after_title', array($this, 'add_date_field'));
         add_action('admin_notices', array($this, 'show_validation_notice'));
         add_action('admin_init', array($this, 'handle_fpdf_install'));
@@ -155,84 +154,6 @@ class LCD_Meeting_Notes {
                 'show_admin_column' => true,
                 'rewrite'           => array('slug' => 'meeting-type'),
             ));
-        }
-
-        // Register Meeting Locations Taxonomy
-        if (!taxonomy_exists('meeting_location')) {
-            register_taxonomy('meeting_location', 'meeting_notes', array(
-                'label'              => __('Meeting Locations', 'lcd-meeting-notes'),
-                'labels'             => array(
-                    'name'              => __('Meeting Locations', 'lcd-meeting-notes'),
-                    'singular_name'     => __('Meeting Location', 'lcd-meeting-notes'),
-                    'add_new_item'      => __('Add New Location', 'lcd-meeting-notes'),
-                    'new_item_name'     => __('New Location', 'lcd-meeting-notes'),
-                    'edit_item'         => __('Edit Location', 'lcd-meeting-notes'),
-                    'update_item'       => __('Update Location', 'lcd-meeting-notes'),
-                ),
-                'hierarchical'       => true,
-                'show_ui'           => true,
-                'show_admin_column' => true,
-                'rewrite'           => array('slug' => 'meeting-location'),
-            ));
-        }
-
-        // Register location meta
-        $this->register_location_meta();
-    }
-
-    /**
-     * Register location meta fields
-     */
-    private function register_location_meta() {
-        register_meta('term', 'location_address', array(
-            'type' => 'string',
-            'description' => 'Meeting location address',
-            'single' => true,
-            'show_in_rest' => true,
-        ));
-    }
-
-    /**
-     * Add Meeting Location term meta fields
-     */
-    public function meeting_location_add_form_fields() {
-        ?>
-        <div class="form-field">
-            <label for="location_address"><?php _e('Address', 'lcd-meeting-notes'); ?></label>
-            <input type="text" name="location_address" id="location_address" value="">
-            <p class="description"><?php _e('Full address of the meeting location', 'lcd-meeting-notes'); ?></p>
-        </div>
-        <?php
-    }
-
-    /**
-     * Edit fields for Meeting Location taxonomy
-     */
-    public function meeting_location_edit_form_fields($term) {
-        $address = get_term_meta($term->term_id, 'location_address', true);
-        ?>
-        <tr class="form-field">
-            <th scope="row">
-                <label for="location_address"><?php _e('Address', 'lcd-meeting-notes'); ?></label>
-            </th>
-            <td>
-                <input type="text" name="location_address" id="location_address" value="<?php echo esc_attr($address); ?>">
-                <p class="description"><?php _e('Full address of the meeting location', 'lcd-meeting-notes'); ?></p>
-            </td>
-        </tr>
-        <?php
-    }
-
-    /**
-     * Save Meeting Location term meta
-     */
-    public function save_location_meta($term_id) {
-        if (isset($_POST['location_address'])) {
-            update_term_meta(
-                $term_id,
-                'location_address',
-                sanitize_text_field($_POST['location_address'])
-            );
         }
     }
 
@@ -1084,6 +1005,36 @@ class LCD_Meeting_Notes {
             'attachment_id' => $attach_id,
             'url' => $upload['url']
         ));
+    }
+
+    /**
+     * Plugin activation
+     */
+    public static function activate() {
+        // Create necessary database tables
+        self::create_tables();
+
+        // Flush rewrite rules
+        flush_rewrite_rules();
+    }
+
+    /**
+     * Create necessary database tables
+     */
+    private static function create_tables() {
+        global $wpdb;
+
+        $charset_collate = $wpdb->get_charset_collate();
+
+        // No custom tables needed at this time
+    }
+
+    /**
+     * Plugin deactivation
+     */
+    public static function deactivate() {
+        // Flush rewrite rules
+        flush_rewrite_rules();
     }
 }
 
