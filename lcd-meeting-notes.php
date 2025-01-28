@@ -19,6 +19,7 @@ define('LCD_MEETING_NOTES_URL', plugin_dir_url(__FILE__));
 // Include required files
 require_once LCD_MEETING_NOTES_PATH . 'includes/class-fpdf-setup.php';
 require_once LCD_MEETING_NOTES_PATH . 'includes/class-meeting-notes-export.php';
+require_once LCD_MEETING_NOTES_PATH . 'includes/class-upcoming-meetings.php';
 
 class LCD_Meeting_Notes {
     private static $instance = null;
@@ -30,7 +31,14 @@ class LCD_Meeting_Notes {
         return self::$instance;
     }
 
+    /**
+     * Initialize the plugin
+     */
     private function __construct() {
+        // Initialize classes
+        new LCD_Meeting_Notes_Export();
+        new LCD_Upcoming_Meetings();
+
         // Check and install FPDF if needed
         if (!LCD_FPDF_Setup::is_installed()) {
             add_action('admin_notices', array($this, 'show_fpdf_notice'));
@@ -220,41 +228,190 @@ class LCD_Meeting_Notes {
         }
     }
 
- 
-
     /**
-     * Add meta boxes for Meeting Notes
+     * Add meta boxes
      */
     public function add_meta_boxes() {
-        // Add agenda meta box
+        add_meta_box(
+            'meeting_date_time',
+            __('Meeting Date & Time', 'lcd-meeting-notes'),
+            array($this, 'meeting_date_time_callback'),
+            'meeting_notes',
+            'normal',
+            'high'
+        );
+
+        add_meta_box(
+            'meeting_attendees',
+            __('Attendees', 'lcd-meeting-notes'),
+            array($this, 'meeting_attendees_callback'),
+            'meeting_notes',
+            'normal',
+            'high'
+        );
+
         add_meta_box(
             'meeting_agenda',
-            __('Meeting Agenda', 'lcd-meeting-notes'),
+            __('Agenda', 'lcd-meeting-notes'),
             array($this, 'meeting_agenda_callback'),
             'meeting_notes',
             'normal',
             'high'
         );
 
-        // Add attendees meta box
         add_meta_box(
-            'meeting_attendees',
-            __('Attendees', 'lcd-meeting-notes'),
-            array($this, 'meeting_details_callback'),
+            'meeting_facebook',
+            __('Facebook Event', 'lcd-meeting-notes'),
+            array($this, 'meeting_facebook_callback'),
             'meeting_notes',
             'side',
-            'high'
+            'default'
         );
+    }
 
-        // Add export options
-        add_meta_box(
-            'meeting_export',
-            __('Export Options', 'lcd-meeting-notes'),
-            array($this, 'meeting_export_callback'),
-            'meeting_notes',
-            'side',
-            'low'
-        );
+    /**
+     * Meeting date and time callback
+     */
+    public function meeting_date_time_callback($post) {
+        wp_nonce_field('lcd_meeting_notes_nonce', 'meeting_notes_nonce');
+        
+        $meeting_date = get_post_meta($post->ID, '_meeting_date', true);
+        $meeting_time = get_post_meta($post->ID, '_meeting_time', true);
+        ?>
+        <div class="meeting-date-time-wrapper">
+            <div class="meeting-date-field">
+                <label for="meeting_date"><?php _e('Meeting Date:', 'lcd-meeting-notes'); ?></label>
+                <input type="date" 
+                       id="meeting_date" 
+                       name="meeting_date" 
+                       value="<?php echo esc_attr($meeting_date); ?>" 
+                       required>
+            </div>
+            <div class="meeting-time-field">
+                <label for="meeting_time"><?php _e('Meeting Time:', 'lcd-meeting-notes'); ?></label>
+                <input type="time" 
+                       id="meeting_time" 
+                       name="meeting_time" 
+                       value="<?php echo esc_attr($meeting_time); ?>" 
+                       required>
+            </div>
+        </div>
+
+        <style>
+            .meeting-date-time-wrapper {
+                padding: 10px 0;
+                display: flex;
+                gap: 20px;
+                align-items: flex-end;
+            }
+            .meeting-date-field,
+            .meeting-time-field {
+                flex: 0 0 auto;
+            }
+            .meeting-date-field label,
+            .meeting-time-field label {
+                display: block;
+                font-weight: 600;
+                margin-bottom: 5px;
+            }
+            #meeting_date,
+            #meeting_time {
+                padding: 5px;
+                border: 1px solid #8c8f94;
+                border-radius: 4px;
+            }
+        </style>
+        <?php
+    }
+
+    /**
+     * Meeting attendees callback
+     */
+    public function meeting_attendees_callback($post) {
+        wp_nonce_field('lcd_meeting_notes_nonce', 'meeting_notes_nonce');
+        
+        $attendees = get_post_meta($post->ID, '_attendees', true);
+        $attendee_array = array_filter(array_map('trim', explode(',', $attendees)));
+        ?>
+        <div class="meeting-details-fields">
+            <p>
+                <label for="attendees_select"><strong><?php _e('Attendees', 'lcd-meeting-notes'); ?></strong></label><br>
+                <select id="attendees_select" class="widefat" multiple="multiple">
+                    <?php
+                    foreach ($attendee_array as $attendee) {
+                        echo sprintf(
+                            '<option value="%s" selected="selected">%s</option>',
+                            esc_attr($attendee),
+                            esc_html($attendee)
+                        );
+                    }
+                    ?>
+                </select>
+                <input type="hidden" name="attendees" id="attendees" value="<?php echo esc_attr($attendees); ?>">
+                <p class="description"><?php _e('Start typing to search for people or enter new names', 'lcd-meeting-notes'); ?></p>
+            </p>
+        </div>
+
+        <!-- Modal for new person -->
+        <div id="new-person-modal" style="display: none;" class="lcd-modal">
+            <div class="lcd-modal-content">
+                <h3><?php _e('Add New Person', 'lcd-meeting-notes'); ?></h3>
+                <div class="lcd-modal-body">
+                    <p>
+                        <label for="new_person_first_name"><?php _e('First Name', 'lcd-meeting-notes'); ?></label><br>
+                        <input type="text" id="new_person_first_name" class="widefat">
+                    </p>
+                    <p>
+                        <label for="new_person_last_name"><?php _e('Last Name', 'lcd-meeting-notes'); ?></label><br>
+                        <input type="text" id="new_person_last_name" class="widefat">
+                    </p>
+                </div>
+                <div class="lcd-modal-footer">
+                    <button type="button" class="button button-primary" id="save-new-person"><?php _e('Add Person', 'lcd-meeting-notes'); ?></button>
+                    <button type="button" class="button" id="cancel-new-person"><?php _e('Cancel', 'lcd-meeting-notes'); ?></button>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .select2-container {
+                width: 100% !important;
+            }
+            .select2-results__option--person {
+                color: #2271b1;
+            }
+            .select2-results__option--free-text {
+                font-style: italic;
+            }
+            .lcd-modal {
+                display: none;
+                position: fixed;
+                z-index: 100000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0,0,0,0.4);
+            }
+            .lcd-modal-content {
+                background-color: #fefefe;
+                margin: 15% auto;
+                padding: 20px;
+                border: 1px solid #ddd;
+                width: 400px;
+                max-width: 90%;
+                border-radius: 4px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+            .lcd-modal-footer {
+                margin-top: 20px;
+                text-align: right;
+            }
+            .lcd-modal-footer .button {
+                margin-left: 10px;
+            }
+        </style>
+        <?php
     }
 
     /**
@@ -364,81 +521,42 @@ class LCD_Meeting_Notes {
     }
 
     /**
-     * Meeting export options callback
+     * Facebook event callback
      */
-    public function meeting_export_callback($post) {
-        wp_nonce_field('lcd_meeting_export_nonce', 'meeting_export_nonce');
+    public function meeting_facebook_callback($post) {
+        wp_nonce_field('lcd_meeting_notes_nonce', 'meeting_notes_nonce');
+        
+        $facebook_url = get_post_meta($post->ID, '_facebook_event_url', true);
         ?>
-        <div class="meeting-export-options">
-            <div class="export-section">
-                <h4><?php _e('PDF Export', 'lcd-meeting-notes'); ?></h4>
+        <div class="facebook-event-wrapper">
+            <p>
+                <label for="facebook_event_url"><?php _e('Event URL:', 'lcd-meeting-notes'); ?></label>
+                <input type="url" 
+                       id="facebook_event_url" 
+                       name="facebook_event_url" 
+                       value="<?php echo esc_url($facebook_url); ?>" 
+                       class="widefat"
+                       placeholder="https://facebook.com/events/...">
+            </p>
+            <?php if (!empty($facebook_url)): ?>
                 <p>
-                    <button type="button" class="button button-secondary" id="preview-pdf">
-                        <?php _e('Preview PDF', 'lcd-meeting-notes'); ?>
-                    </button>
-                    <button type="button" class="button button-primary" id="download-pdf">
-                        <?php _e('Download PDF', 'lcd-meeting-notes'); ?>
-                    </button>
+                    <a href="<?php echo esc_url($facebook_url); ?>" 
+                       class="button" 
+                       target="_blank">
+                        <?php _e('View Event', 'lcd-meeting-notes'); ?>
+                    </a>
                 </p>
-            </div>
-
-            <div class="export-section">
-                <h4><?php _e('Email Options', 'lcd-meeting-notes'); ?></h4>
-                <p>
-                    <label for="email_to"><?php _e('Send To:', 'lcd-meeting-notes'); ?></label><br>
-                    <input type="email" id="email_to" class="widefat" placeholder="<?php esc_attr_e('recipient@example.com', 'lcd-meeting-notes'); ?>">
-                </p>
-                <p>
-                    <label for="email_subject"><?php _e('Subject:', 'lcd-meeting-notes'); ?></label><br>
-                    <input type="text" id="email_subject" class="widefat" value="<?php echo esc_attr(sprintf(__('Meeting Notes: %s', 'lcd-meeting-notes'), $post->post_title)); ?>">
-                </p>
-                <p>
-                    <label for="email_message"><?php _e('Custom Message:', 'lcd-meeting-notes'); ?></label><br>
-                    <textarea id="email_message" class="widefat" rows="3" placeholder="<?php esc_attr_e('Optional message to include at the start of the email', 'lcd-meeting-notes'); ?>"></textarea>
-                </p>
-                <p>
-                    <label>
-                        <input type="checkbox" id="include_pdf" checked>
-                        <?php _e('Include PDF attachment', 'lcd-meeting-notes'); ?>
-                    </label>
-                </p>
-                <p>
-                    <label>
-                        <input type="checkbox" id="include_notes" checked>
-                        <?php _e('Include notes in email body', 'lcd-meeting-notes'); ?>
-                    </label>
-                </p>
-                <p>
-                    <button type="button" class="button button-primary" id="send-email">
-                        <?php _e('Send Email', 'lcd-meeting-notes'); ?>
-                    </button>
-                    <span id="email-status" style="display: none; margin-left: 10px;"></span>
-                </p>
-            </div>
+            <?php endif; ?>
         </div>
+
         <style>
-            .export-section {
-                margin-bottom: 20px;
-                padding-bottom: 20px;
-                border-bottom: 1px solid #eee;
+            .facebook-event-wrapper label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: 600;
             }
-            .export-section:last-child {
-                border-bottom: none;
-                margin-bottom: 0;
-                padding-bottom: 0;
-            }
-            .export-section h4 {
-                margin: 0 0 10px;
-            }
-            #email-status {
-                line-height: 28px;
-                font-weight: 500;
-            }
-            #email-status.success {
-                color: #008a20;
-            }
-            #email-status.error {
-                color: #d63638;
+            .facebook-event-wrapper .button {
+                margin-top: 8px;
             }
         </style>
         <?php
@@ -614,96 +732,6 @@ class LCD_Meeting_Notes {
     }
 
     /**
-     * Meeting details callback
-     */
-    public function meeting_details_callback($post) {
-        wp_nonce_field('lcd_meeting_notes_nonce', 'meeting_notes_nonce');
-        
-        $attendees = get_post_meta($post->ID, '_attendees', true);
-        $attendee_array = array_filter(array_map('trim', explode(',', $attendees)));
-        ?>
-        <div class="meeting-details-fields">
-            <p>
-                <label for="attendees_select"><strong><?php _e('Attendees', 'lcd-meeting-notes'); ?></strong></label><br>
-                <select id="attendees_select" class="widefat" multiple="multiple">
-                    <?php
-                    foreach ($attendee_array as $attendee) {
-                        echo sprintf(
-                            '<option value="%s" selected="selected">%s</option>',
-                            esc_attr($attendee),
-                            esc_html($attendee)
-                        );
-                    }
-                    ?>
-                </select>
-                <input type="hidden" name="attendees" id="attendees" value="<?php echo esc_attr($attendees); ?>">
-                <p class="description"><?php _e('Start typing to search for people or enter new names', 'lcd-meeting-notes'); ?></p>
-            </p>
-        </div>
-
-        <!-- Modal for new person -->
-        <div id="new-person-modal" style="display: none;" class="lcd-modal">
-            <div class="lcd-modal-content">
-                <h3><?php _e('Add New Person', 'lcd-meeting-notes'); ?></h3>
-                <div class="lcd-modal-body">
-                    <p>
-                        <label for="new_person_first_name"><?php _e('First Name', 'lcd-meeting-notes'); ?></label><br>
-                        <input type="text" id="new_person_first_name" class="widefat">
-                    </p>
-                    <p>
-                        <label for="new_person_last_name"><?php _e('Last Name', 'lcd-meeting-notes'); ?></label><br>
-                        <input type="text" id="new_person_last_name" class="widefat">
-                    </p>
-                </div>
-                <div class="lcd-modal-footer">
-                    <button type="button" class="button button-primary" id="save-new-person"><?php _e('Add Person', 'lcd-meeting-notes'); ?></button>
-                    <button type="button" class="button" id="cancel-new-person"><?php _e('Cancel', 'lcd-meeting-notes'); ?></button>
-                </div>
-            </div>
-        </div>
-
-        <style>
-            .select2-container {
-                width: 100% !important;
-            }
-            .select2-results__option--person {
-                color: #2271b1;
-            }
-            .select2-results__option--free-text {
-                font-style: italic;
-            }
-            .lcd-modal {
-                display: none;
-                position: fixed;
-                z-index: 100000;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0,0,0,0.4);
-            }
-            .lcd-modal-content {
-                background-color: #fefefe;
-                margin: 15% auto;
-                padding: 20px;
-                border: 1px solid #ddd;
-                width: 400px;
-                max-width: 90%;
-                border-radius: 4px;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            }
-            .lcd-modal-footer {
-                margin-top: 20px;
-                text-align: right;
-            }
-            .lcd-modal-footer .button {
-                margin-left: 10px;
-            }
-        </style>
-        <?php
-    }
-
-    /**
      * Save meeting notes meta and update title
      */
     public function save_meeting_notes_meta($post_id) {
@@ -747,6 +775,14 @@ class LCD_Meeting_Notes {
             $pdf_id = intval($_POST['agenda_pdf_id']);
             if ($pdf_id > 0 || empty($_POST['agenda_pdf_id'])) {
                 update_post_meta($post_id, '_meeting_agenda_pdf', $pdf_id);
+            }
+        }
+
+        // Save Facebook event URL
+        if (isset($_POST['facebook_event_url'])) {
+            $facebook_url = esc_url_raw($_POST['facebook_event_url']);
+            if (empty($facebook_url) || wp_http_validate_url($facebook_url)) {
+                update_post_meta($post_id, '_facebook_event_url', $facebook_url);
             }
         }
 

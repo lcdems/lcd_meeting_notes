@@ -1,0 +1,137 @@
+.upcoming-meeting {
+    background: #fff;
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    margin: 2rem 0;
+}
+
+.meeting-header {
+    margin-bottom: 1.5rem;
+}
+
+.meeting-header h2 {
+    color: var(--color-primary);
+    font-size: 2rem;
+    margin: 0 0 1rem;
+}
+
+.meeting-datetime {
+    display: flex;
+    gap: 2rem;
+    color: var(--color-text);
+    font-size: 1.1rem;
+}
+
+.meeting-date,
+.meeting-time {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.meeting-date .dashicons,
+.meeting-time .dashicons {
+    color: var(--color-primary);
+    font-size: 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+.meeting-description {
+    margin: 1.5rem 0;
+    color: var(--color-text);
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.meeting-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.facebook-rsvp,
+.view-agenda {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.facebook-rsvp {
+    background-color: #1877f2;
+    color: #fff;
+}
+
+.facebook-rsvp:hover {
+    background-color: #0d6efd;
+    color: #fff;
+}
+
+.view-agenda {
+    background-color: var(--color-secondary);
+    color: #fff;
+}
+
+.view-agenda:hover {
+    background-color: var(--color-secondary-dark);
+    color: #fff;
+}
+
+.facebook-rsvp .dashicons,
+.view-agenda .dashicons {
+    font-size: 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+.no-upcoming-meetings {
+    background: #f8f9fa;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    text-align: center;
+    color: var(--color-text-light);
+    font-size: 1.1rem;
+}
+
+/* Add to Calendar Button Customization */
+.add-to-calendar {
+    --btn-background: var(--color-primary);
+    --btn-text: #fff;
+    --btn-shadow: rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .upcoming-meeting {
+        padding: 1.5rem;
+        margin: 1rem 0;
+    }
+
+    .meeting-header h2 {
+        font-size: 1.75rem;
+    }
+
+    .meeting-datetime {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .meeting-actions {
+        flex-direction: column;
+    }
+
+    .facebook-rsvp,
+    .view-agenda {
+        justify-content: center;
+    }
+} 
