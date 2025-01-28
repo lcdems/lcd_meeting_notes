@@ -23,14 +23,7 @@ class LCD_Upcoming_Meetings {
             '1.0.0'
         );
 
-        // Add to Calendar Button Library
-        wp_enqueue_script(
-            'add-to-calendar',
-            'https://cdn.jsdelivr.net/npm/add-to-calendar-button@2',
-            array(),
-            '2.0.0',
-            true
-        );
+        wp_enqueue_style('dashicons');
     }
 
     /**
@@ -68,24 +61,98 @@ class LCD_Upcoming_Meetings {
     }
 
     /**
-     * Format meeting datetime for add to calendar
+     * Get location details
      */
-    private function format_meeting_datetime($post_id, $start = true) {
-        $date = get_post_meta($post_id, '_meeting_date', true);
-        $time = get_post_meta($post_id, '_meeting_time', true);
+    private function get_location_details($post_id) {
+        $locations = wp_get_object_terms($post_id, 'meeting_location');
+        if (empty($locations)) {
+            return null;
+        }
+
+        $location = $locations[0];
+        $address = get_term_meta($location->term_id, 'location_address', true);
+
+        return array(
+            'name' => $location->name,
+            'address' => $address,
+            'maps_url' => !empty($address) ? 
+                'https://www.google.com/maps/dir/?api=1&destination=' . urlencode($address) : 
+                null
+        );
+    }
+
+    /**
+     * Generate calendar links
+     */
+    private function get_calendar_links($meeting) {
+        $date = get_post_meta($meeting->ID, '_meeting_date', true);
+        $time = get_post_meta($meeting->ID, '_meeting_time', true);
+        $location = $this->get_location_details($meeting->ID);
         
         if (empty($date) || empty($time)) {
-            return '';
+            return array();
         }
-        
-        $datetime = new DateTime($date . ' ' . $time);
-        
-        // If this is an end time, add 1 hour to the start time
-        if (!$start) {
-            $datetime->modify('+1 hour');
+
+        // Format datetime for calendar
+        $start_datetime = new DateTime($date . ' ' . $time);
+        $end_datetime = clone $start_datetime;
+        $end_datetime->modify('+1 hour');
+
+        // Get meeting types
+        $meeting_types = wp_get_object_terms($meeting->ID, 'meeting_type');
+        $type_names = array_map(function($term) {
+            return $term->name;
+        }, $meeting_types);
+
+        // Prepare event details
+        $title = implode(' & ', $type_names) . ' Meeting';
+        $description = wp_strip_all_tags($meeting->post_content);
+        $location_string = $location ? $location['name'] . ($location['address'] ? ' - ' . $location['address'] : '') : '';
+
+        // Google Calendar link
+        $google_params = array(
+            'action' => 'TEMPLATE',
+            'text' => $title,
+            'dates' => $start_datetime->format('Ymd\THis') . '/' . $end_datetime->format('Ymd\THis'),
+            'details' => $description,
+            'location' => $location_string,
+            'ctz' => 'America/Los_Angeles'
+        );
+        $google_url = 'https://calendar.google.com/calendar/render?' . http_build_query($google_params);
+
+        // Apple Calendar link (ics file)
+        $ics_content = "BEGIN:VCALENDAR\r\n";
+        $ics_content .= "VERSION:2.0\r\n";
+        $ics_content .= "BEGIN:VEVENT\r\n";
+        $ics_content .= "UID:" . uniqid() . "@lewiscountydemocrats.org\r\n";
+        $ics_content .= "DTSTAMP:" . gmdate('Ymd\THis\Z') . "\r\n";
+        $ics_content .= "DTSTART:" . $start_datetime->format('Ymd\THis') . "\r\n";
+        $ics_content .= "DTEND:" . $end_datetime->format('Ymd\THis') . "\r\n";
+        $ics_content .= "SUMMARY:" . $this->ics_escape($title) . "\r\n";
+        if (!empty($description)) {
+            $ics_content .= "DESCRIPTION:" . $this->ics_escape($description) . "\r\n";
         }
-        
-        return $datetime->format('Y-m-d H:i');
+        if (!empty($location_string)) {
+            $ics_content .= "LOCATION:" . $this->ics_escape($location_string) . "\r\n";
+        }
+        $ics_content .= "END:VEVENT\r\n";
+        $ics_content .= "END:VCALENDAR\r\n";
+
+        $ics_url = 'data:text/calendar;charset=utf8,' . rawurlencode($ics_content);
+
+        return array(
+            'google' => $google_url,
+            'apple' => $ics_url
+        );
+    }
+
+    /**
+     * Escape special characters for ICS format
+     */
+    private function ics_escape($string) {
+        $string = str_replace(array("\r\n", "\n", "\r"), "\\n", $string);
+        $string = str_replace(array(",", ";", "\\"), array("\\,", "\\;", "\\\\"), $string);
+        return $string;
     }
 
     /**
@@ -105,6 +172,8 @@ class LCD_Upcoming_Meetings {
         $meeting_time = get_post_meta($meeting->ID, '_meeting_time', true);
         $facebook_url = get_post_meta($meeting->ID, '_facebook_event_url', true);
         $agenda_pdf_id = get_post_meta($meeting->ID, '_meeting_agenda_pdf', true);
+        $location = $this->get_location_details($meeting->ID);
+        $calendar_links = $this->get_calendar_links($meeting);
         
         // Format datetime for display
         $datetime = new DateTime($meeting_date . ' ' . $meeting_time);
@@ -123,11 +192,30 @@ class LCD_Upcoming_Meetings {
         // Meeting header
         $output .= '<div class="meeting-header">';
         $output .= '<h2>' . implode(' & ', $type_names) . ' Meeting</h2>';
+        $output .= '<div class="meeting-details">';
         $output .= '<div class="meeting-datetime">';
         $output .= '<div class="meeting-date"><i class="dashicons dashicons-calendar-alt"></i> ' . $formatted_date . '</div>';
         $output .= '<div class="meeting-time"><i class="dashicons dashicons-clock"></i> ' . $formatted_time . '</div>';
         $output .= '</div>';
-        $output .= '</div>';
+
+        // Location
+        if ($location) {
+            $output .= '<div class="meeting-location">';
+            $output .= '<i class="dashicons dashicons-location"></i> ';
+            $output .= '<span>' . esc_html($location['name']);
+            if ($location['address']) {
+                $output .= ' - ' . esc_html($location['address']);
+            }
+            $output .= '</span>';
+            if ($location['maps_url']) {
+                $output .= ' <a href="' . esc_url($location['maps_url']) . '" class="directions-link" target="_blank">';
+                $output .= '<i class="dashicons dashicons-external"></i> ' . __('Get Directions', 'lcd-meeting-notes');
+                $output .= '</a>';
+            }
+            $output .= '</div>';
+        }
+        $output .= '</div>'; // End meeting-details
+        $output .= '</div>'; // End meeting-header
 
         // Meeting description
         if (!empty($meeting->post_content)) {
@@ -139,21 +227,21 @@ class LCD_Upcoming_Meetings {
         // Meeting actions
         $output .= '<div class="meeting-actions">';
         
-        // Add to Calendar button
-        $output .= '<div class="add-to-calendar">';
-        $output .= '<add-to-calendar-button
-            name="' . esc_attr($meeting->post_title) . '"
-            description="' . esc_attr(wp_strip_all_tags($meeting->post_content)) . '"
-            startDate="' . esc_attr($this->format_meeting_datetime($meeting->ID, true)) . '"
-            endDate="' . esc_attr($this->format_meeting_datetime($meeting->ID, false)) . '"
-            options="\'Google Calendar\',\'iCal\',\'Outlook\'"
-            timeZone="America/New_York"
-            buttonStyle="3d"
-            hideBackground="true"
-            hideIconButton="true"
-            size="3"
-        ></add-to-calendar-button>';
-        $output .= '</div>';
+        // Calendar links
+        if (!empty($calendar_links)) {
+            $output .= '<div class="calendar-links">';
+            if (isset($calendar_links['google'])) {
+                $output .= '<a href="' . esc_url($calendar_links['google']) . '" class="calendar-link google" target="_blank">';
+                $output .= '<i class="dashicons dashicons-calendar-alt"></i> ' . __('Add to Google Calendar', 'lcd-meeting-notes');
+                $output .= '</a>';
+            }
+            if (isset($calendar_links['apple'])) {
+                $output .= '<a href="' . esc_url($calendar_links['apple']) . '" class="calendar-link apple" download="meeting.ics">';
+                $output .= '<i class="dashicons dashicons-calendar-alt"></i> ' . __('Add to Apple Calendar', 'lcd-meeting-notes');
+                $output .= '</a>';
+            }
+            $output .= '</div>';
+        }
 
         // Facebook RSVP button
         if (!empty($facebook_url)) {
