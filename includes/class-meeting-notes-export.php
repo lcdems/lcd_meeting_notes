@@ -1,6 +1,6 @@
 <?php
 /**
- * Meeting Notes Export functionality
+ * Meeting Export functionality
  */
 
 if (!defined('ABSPATH')) exit;
@@ -43,7 +43,7 @@ class LCD_Meeting_Notes_Export {
     public function generate_pdf($post_id) {
         $post = get_post($post_id);
         if (!$post || $post->post_type !== 'meeting_notes') {
-            return new WP_Error('invalid_post', __('Invalid meeting notes post', 'lcd-meeting-notes'));
+            return new WP_Error('invalid_post', __('Invalid meeting post', 'lcd-meeting-notes'));
         }
 
         // Get meeting details
@@ -102,7 +102,7 @@ class LCD_Meeting_Notes_Export {
         // Content
         $pdf->Ln(10);
         $pdf->SetFont('Arial', 'B', 12);
-        $pdf->Cell(0, 8, 'Meeting Notes:', 0, 1);
+        $pdf->Cell(0, 8, 'Meeting Details:', 0, 1);
         $pdf->Ln(2);
         $pdf->SetFont('Arial', '', 12);
 
@@ -145,7 +145,7 @@ class LCD_Meeting_Notes_Export {
     public function send_email($post_id, $to, $subject = '', $include_pdf = false, $include_notes = true, $custom_message = '') {
         $post = get_post($post_id);
         if (!$post || $post->post_type !== 'meeting_notes') {
-            return new WP_Error('invalid_post', __('Invalid meeting notes post', 'lcd-meeting-notes'));
+            return new WP_Error('invalid_post', __('Invalid meeting post', 'lcd-meeting-notes'));
         }
 
         // Get meeting details
@@ -155,7 +155,7 @@ class LCD_Meeting_Notes_Export {
 
         // Build email content
         if (empty($subject)) {
-            $subject = sprintf(__('Meeting Notes: %s', 'lcd-meeting-notes'), $post->post_title);
+            $subject = sprintf(__('Meeting: %s', 'lcd-meeting-notes'), $post->post_title);
         }
         
         $body = '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">';
