@@ -155,6 +155,83 @@ class LCD_Meeting_Notes {
                 'rewrite'           => array('slug' => 'meeting-type'),
             ));
         }
+
+        // Register Meeting Locations Taxonomy
+        if (!taxonomy_exists('meeting_location')) {
+            register_taxonomy('meeting_location', 'meeting_notes', array(
+                'label'              => __('Meeting Locations', 'lcd-meeting-notes'),
+                'labels'             => array(
+                    'name'              => __('Meeting Locations', 'lcd-meeting-notes'),
+                    'singular_name'     => __('Meeting Location', 'lcd-meeting-notes'),
+                    'add_new_item'      => __('Add New Location', 'lcd-meeting-notes'),
+                    'new_item_name'     => __('New Location', 'lcd-meeting-notes'),
+                    'edit_item'         => __('Edit Location', 'lcd-meeting-notes'),
+                    'update_item'       => __('Update Location', 'lcd-meeting-notes'),
+                ),
+                'hierarchical'       => true,
+                'show_ui'           => true,
+                'show_admin_column' => true,
+                'rewrite'           => array('slug' => 'meeting-location'),
+            ));
+        }
+
+        // Register location meta
+        register_meta('term', 'location_address', array(
+            'type' => 'string',
+            'description' => 'Meeting location address',
+            'single' => true,
+            'show_in_rest' => true,
+        ));
+
+        // Add hooks for location meta fields
+        add_action('meeting_location_add_form_fields', array($this, 'meeting_location_add_form_fields'));
+        add_action('meeting_location_edit_form_fields', array($this, 'meeting_location_edit_form_fields'));
+        add_action('created_meeting_location', array($this, 'save_location_meta'));
+        add_action('edited_meeting_location', array($this, 'save_location_meta'));
+    }
+
+    /**
+     * Add Meeting Location term meta fields
+     */
+    public function meeting_location_add_form_fields() {
+        ?>
+        <div class="form-field">
+            <label for="location_address"><?php _e('Address', 'lcd-meeting-notes'); ?></label>
+            <input type="text" name="location_address" id="location_address" value="">
+            <p class="description"><?php _e('Full address of the meeting location', 'lcd-meeting-notes'); ?></p>
+        </div>
+        <?php
+    }
+
+    /**
+     * Edit fields for Meeting Location taxonomy
+     */
+    public function meeting_location_edit_form_fields($term) {
+        $address = get_term_meta($term->term_id, 'location_address', true);
+        ?>
+        <tr class="form-field">
+            <th scope="row">
+                <label for="location_address"><?php _e('Address', 'lcd-meeting-notes'); ?></label>
+            </th>
+            <td>
+                <input type="text" name="location_address" id="location_address" value="<?php echo esc_attr($address); ?>">
+                <p class="description"><?php _e('Full address of the meeting location', 'lcd-meeting-notes'); ?></p>
+            </td>
+        </tr>
+        <?php
+    }
+
+    /**
+     * Save Meeting Location term meta
+     */
+    public function save_location_meta($term_id) {
+        if (isset($_POST['location_address'])) {
+            update_term_meta(
+                $term_id,
+                'location_address',
+                sanitize_text_field($_POST['location_address'])
+            );
+        }
     }
 
     /**
