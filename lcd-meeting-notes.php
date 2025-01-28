@@ -220,17 +220,7 @@ class LCD_Meeting_Notes {
         }
     }
 
-    /**
-     * Add default meeting locations on activation
-     */
-    public function add_default_meeting_locations() {
-        if (!term_exists('LCDCC Office', 'meeting_location')) {
-            $term = wp_insert_term('LCDCC Office', 'meeting_location');
-            if (!is_wp_error($term)) {
-                update_term_meta($term['term_id'], 'location_address', '3701 O Street, Suite 200, Lincoln, NE 68510');
-            }
-        }
-    }
+ 
 
     /**
      * Add meta boxes for Meeting Notes
@@ -574,17 +564,52 @@ class LCD_Meeting_Notes {
             return;
         }
 
-        wp_nonce_field('lcd_meeting_notes_nonce', 'meeting_notes_nonce');
-
         $meeting_date = get_post_meta($post->ID, '_meeting_date', true);
-        if (empty($meeting_date)) {
-            $meeting_date = current_time('Y-m-d');
-        }
+        $meeting_time = get_post_meta($post->ID, '_meeting_time', true);
         ?>
-        <div class="meeting-date-field" style="margin: 1em 0;">
-            <label for="meeting_date"><strong><?php _e('Meeting Date', 'lcd-meeting-notes'); ?></strong></label><br>
-            <input type="date" id="meeting_date" name="meeting_date" value="<?php echo esc_attr($meeting_date); ?>" class="widefat" required style="max-width: 200px;">
+        <div class="meeting-date-time-wrapper">
+            <div class="meeting-date-field">
+                <label for="meeting_date"><?php _e('Meeting Date:', 'lcd-meeting-notes'); ?></label>
+                <input type="date" 
+                       id="meeting_date" 
+                       name="meeting_date" 
+                       value="<?php echo esc_attr($meeting_date); ?>" 
+                       required>
+            </div>
+            <div class="meeting-time-field">
+                <label for="meeting_time"><?php _e('Meeting Time:', 'lcd-meeting-notes'); ?></label>
+                <input type="time" 
+                       id="meeting_time" 
+                       name="meeting_time" 
+                       value="<?php echo esc_attr($meeting_time); ?>" 
+                       required>
+            </div>
         </div>
+
+        <style>
+            .meeting-date-time-wrapper {
+                padding: 10px 0;
+                display: flex;
+                gap: 20px;
+                align-items: flex-end;
+            }
+            .meeting-date-field,
+            .meeting-time-field {
+                flex: 0 0 auto;
+            }
+            .meeting-date-field label,
+            .meeting-time-field label {
+                display: block;
+                font-weight: 600;
+                margin-bottom: 5px;
+            }
+            #meeting_date,
+            #meeting_time {
+                padding: 5px;
+                border: 1px solid #8c8f94;
+                border-radius: 4px;
+            }
+        </style>
         <?php
     }
 
@@ -707,6 +732,11 @@ class LCD_Meeting_Notes {
             update_post_meta($post_id, '_meeting_date', sanitize_text_field($_POST['meeting_date']));
         }
 
+        // Save meeting time
+        if (isset($_POST['meeting_time'])) {
+            update_post_meta($post_id, '_meeting_time', sanitize_text_field($_POST['meeting_time']));
+        }
+
         // Save attendees
         if (isset($_POST['attendees'])) {
             update_post_meta($post_id, '_attendees', sanitize_textarea_field($_POST['attendees']));
@@ -723,11 +753,12 @@ class LCD_Meeting_Notes {
         // Check if we're trying to publish
         if (isset($_POST['post_status']) && $_POST['post_status'] === 'publish') {
             $meeting_date = get_post_meta($post_id, '_meeting_date', true);
+            $meeting_time = get_post_meta($post_id, '_meeting_time', true);
             
             // Get meeting type directly from the taxonomy
             $meeting_types = wp_get_object_terms($post_id, 'meeting_type');
             
-            if (empty($meeting_date) || empty($meeting_types)) {
+            if (empty($meeting_date) || empty($meeting_time) || empty($meeting_types)) {
                 // Set post status back to draft
                 remove_action('save_post', array($this, 'save_meeting_notes_meta'));
                 wp_update_post(array(
@@ -754,13 +785,15 @@ class LCD_Meeting_Notes {
         // Update title if we have both fields
         $meeting_types = wp_get_object_terms($post_id, 'meeting_type');
         $meeting_date = get_post_meta($post_id, '_meeting_date', true);
+        $meeting_time = get_post_meta($post_id, '_meeting_time', true);
         
-        if (!empty($meeting_types) && !empty($meeting_date)) {
+        if (!empty($meeting_types) && !empty($meeting_date) && !empty($meeting_time)) {
             $type_names = array_map(function($term) {
                 return $term->name;
             }, $meeting_types);
             
-            $formatted_date = date('F j, Y', strtotime($meeting_date));
+            $datetime = new DateTime($meeting_date . ' ' . $meeting_time);
+            $formatted_date = $datetime->format('F j, Y \a\t g:i A');
             $title = sprintf('%s Meeting - %s', implode(' & ', $type_names), $formatted_date);
             
             if ($title !== get_the_title($post_id)) {
