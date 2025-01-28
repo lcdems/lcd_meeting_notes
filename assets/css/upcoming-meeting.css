@@ -1,6 +1,6 @@
 .upcoming-meeting {
     background: #fff;
-    border-radius: var(--border-radius);
+    border-radius: 4px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     padding: 2rem;
     margin: 2rem 0;
@@ -11,7 +11,7 @@
 }
 
 .meeting-header h2 {
-    color: var(--color-primary);
+    color: #0b57d0;
     font-size: 2rem;
     margin: 0 0 1rem;
 }
@@ -19,7 +19,7 @@
 .meeting-datetime {
     display: flex;
     gap: 2rem;
-    color: var(--color-text);
+    color: #333;
     font-size: 1.1rem;
 }
 
@@ -32,7 +32,7 @@
 
 .meeting-date .dashicons,
 .meeting-time .dashicons {
-    color: var(--color-primary);
+    color: #0b57d0;
     font-size: 1.2rem;
     width: 1.2rem;
     height: 1.2rem;
@@ -40,7 +40,7 @@
 
 .meeting-description {
     margin: 1.5rem 0;
-    color: var(--color-text);
+    color: #333;
     font-size: 1.1rem;
     line-height: 1.6;
 }
@@ -51,7 +51,7 @@
     gap: 1rem;
     margin-top: 2rem;
     padding-top: 1.5rem;
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid #ddd;
 }
 
 .facebook-rsvp,
@@ -60,7 +60,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1.25rem;
-    border-radius: var(--border-radius);
+    border-radius: 4px;
     font-weight: 500;
     text-decoration: none;
     transition: all 0.2s ease;
@@ -68,22 +68,24 @@
 
 .facebook-rsvp {
     background-color: #1877f2;
-    color: #fff;
+    color: #fff !important;
 }
 
 .facebook-rsvp:hover {
     background-color: #0d6efd;
-    color: #fff;
+    color: #fff !important;
+    text-decoration: none;
 }
 
 .view-agenda {
-    background-color: var(--color-secondary);
-    color: #fff;
+    background-color: #2e7d32;
+    color: #fff !important;
 }
 
 .view-agenda:hover {
-    background-color: var(--color-secondary-dark);
-    color: #fff;
+    background-color: #1b5e20;
+    color: #fff !important;
+    text-decoration: none;
 }
 
 .facebook-rsvp .dashicons,
@@ -95,17 +97,17 @@
 
 .no-upcoming-meetings {
     background: #f8f9fa;
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
+    border: 1px solid #ddd;
+    border-radius: 4px;
     padding: 2rem;
     text-align: center;
-    color: var(--color-text-light);
+    color: #666;
     font-size: 1.1rem;
 }
 
 /* Add to Calendar Button Customization */
 .add-to-calendar {
-    --btn-background: var(--color-primary);
+    --btn-background: #0b57d0;
     --btn-text: #fff;
     --btn-shadow: rgba(0, 0, 0, 0.1);
 }

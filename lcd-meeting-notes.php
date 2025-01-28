@@ -19,7 +19,6 @@ define('LCD_MEETING_NOTES_URL', plugin_dir_url(__FILE__));
 // Include required files
 require_once LCD_MEETING_NOTES_PATH . 'includes/class-fpdf-setup.php';
 require_once LCD_MEETING_NOTES_PATH . 'includes/class-meeting-notes-export.php';
-require_once LCD_MEETING_NOTES_PATH . 'includes/class-upcoming-meetings.php';
 
 class LCD_Meeting_Notes {
     private static $instance = null;
@@ -35,9 +34,18 @@ class LCD_Meeting_Notes {
      * Initialize the plugin
      */
     private function __construct() {
-        // Initialize classes
-        new LCD_Meeting_Notes_Export();
-        new LCD_Upcoming_Meetings();
+        // Include required files
+        require_once plugin_dir_path(__FILE__) . 'includes/class-fpdf-setup.php';
+        require_once plugin_dir_path(__FILE__) . 'includes/class-meeting-notes-export.php';
+
+        // Initialize export class using singleton pattern
+        LCD_Meeting_Notes_Export::get_instance();
+
+        // Only load upcoming meetings on the frontend
+        if (!is_admin()) {
+            require_once plugin_dir_path(__FILE__) . 'includes/class-upcoming-meetings.php';
+            new LCD_Upcoming_Meetings();
+        }
 
         // Check and install FPDF if needed
         if (!LCD_FPDF_Setup::is_installed()) {
