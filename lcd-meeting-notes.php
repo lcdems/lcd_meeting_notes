@@ -1047,6 +1047,5 @@ add_action('plugins_loaded', 'lcd_meeting_notes_init');
 // Register activation hook
 function lcd_meeting_notes_activate() {
     $instance = LCD_Meeting_Notes::get_instance();
-    $instance->add_default_meeting_locations();
 }
 register_activation_hook(__FILE__, 'lcd_meeting_notes_activate'); 
