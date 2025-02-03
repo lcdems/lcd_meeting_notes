@@ -17,8 +17,7 @@ define('LCD_MEETING_NOTES_PATH', plugin_dir_path(__FILE__));
 define('LCD_MEETING_NOTES_URL', plugin_dir_url(__FILE__));
 
 // Include required files
-require_once LCD_MEETING_NOTES_PATH . 'includes/class-fpdf-setup.php';
-require_once LCD_MEETING_NOTES_PATH . 'includes/class-meeting-notes-export.php';
+require_once LCD_MEETING_NOTES_PATH . 'includes/class-upcoming-meetings.php';
 
 class LCD_Meeting_Notes {
     private static $instance = null;
@@ -34,36 +33,23 @@ class LCD_Meeting_Notes {
      * Initialize the plugin
      */
     private function __construct() {
-        // Include required files
-        require_once plugin_dir_path(__FILE__) . 'includes/class-fpdf-setup.php';
-        require_once plugin_dir_path(__FILE__) . 'includes/class-meeting-notes-export.php';
-
-        // Initialize export class using singleton pattern
-        LCD_Meeting_Notes_Export::get_instance();
-
         // Only load upcoming meetings on the frontend
         if (!is_admin()) {
             require_once plugin_dir_path(__FILE__) . 'includes/class-upcoming-meetings.php';
             new LCD_Upcoming_Meetings();
         }
 
-        // Check and install FPDF if needed
-        if (!LCD_FPDF_Setup::is_installed()) {
-            add_action('admin_notices', array($this, 'show_fpdf_notice'));
-        }
-
         add_action('init', array($this, 'register_post_type'));
         add_action('add_meta_boxes', array($this, 'add_meta_boxes'));
         add_action('save_post', array($this, 'save_meeting_notes_meta'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
-        add_action('wp_ajax_lcd_export_meeting_pdf', array($this, 'handle_pdf_export'));
-        add_action('wp_ajax_lcd_generate_meeting_email', array($this, 'handle_email_generation'));
-        add_action('wp_ajax_lcd_search_people', array($this, 'ajax_search_people'));
-        add_action('wp_ajax_lcd_create_person', array($this, 'ajax_create_person'));
-        add_action('wp_ajax_upload_agenda_pdf', array($this, 'handle_agenda_pdf_upload'));
+        add_action('wp_ajax_upload_agenda_pdf', array($this, 'handle_file_upload'));
+        add_action('wp_ajax_upload_meeting_notes', array($this, 'handle_file_upload'));
         add_action('edit_form_after_title', array($this, 'add_date_field'));
         add_action('admin_notices', array($this, 'show_validation_notice'));
-        add_action('admin_init', array($this, 'handle_fpdf_install'));
+        add_action('template_redirect', array($this, 'handle_single_meeting_redirect'));
+        add_filter('archive_template', array($this, 'load_meeting_archive_template'));
+        add_action('pre_get_posts', array($this, 'order_meetings_by_date'));
         
         // Add title field modifications
         add_filter('enter_title_here', array($this, 'change_title_placeholder'), 10, 2);
@@ -239,18 +225,9 @@ class LCD_Meeting_Notes {
      */
     public function add_meta_boxes() {
         add_meta_box(
-            'meeting_attendees',
-            __('Attendees', 'lcd-meeting-notes'),
-            array($this, 'meeting_attendees_callback'),
-            'meeting_notes',
-            'normal',
-            'high'
-        );
-
-        add_meta_box(
-            'meeting_agenda',
-            __('Agenda', 'lcd-meeting-notes'),
-            array($this, 'meeting_agenda_callback'),
+            'meeting_files',
+            __('Agenda & Meeting Notes', 'lcd-meeting-notes'),
+            array($this, 'meeting_files_callback'),
             'meeting_notes',
             'normal',
             'high'
@@ -267,198 +244,118 @@ class LCD_Meeting_Notes {
     }
 
     /**
-     * Meeting attendees callback
+     * Meeting files callback
      */
-    public function meeting_attendees_callback($post) {
+    public function meeting_files_callback($post) {
         wp_nonce_field('lcd_meeting_notes_nonce', 'meeting_notes_nonce');
         
-        $attendees = get_post_meta($post->ID, '_attendees', true);
-        $attendee_array = array_filter(array_map('trim', explode(',', $attendees)));
-        ?>
-        <div class="meeting-details-fields">
-            <p>
-                <label for="attendees_select"><strong><?php _e('Attendees', 'lcd-meeting-notes'); ?></strong></label><br>
-                <select id="attendees_select" class="widefat" multiple="multiple">
-                    <?php
-                    foreach ($attendee_array as $attendee) {
-                        echo sprintf(
-                            '<option value="%s" selected="selected">%s</option>',
-                            esc_attr($attendee),
-                            esc_html($attendee)
-                        );
-                    }
-                    ?>
-                </select>
-                <input type="hidden" name="attendees" id="attendees" value="<?php echo esc_attr($attendees); ?>">
-                <p class="description"><?php _e('Start typing to search for people or enter new names', 'lcd-meeting-notes'); ?></p>
-            </p>
-        </div>
-
-        <!-- Modal for new person -->
-        <div id="new-person-modal" style="display: none;" class="lcd-modal">
-            <div class="lcd-modal-content">
-                <h3><?php _e('Add New Person', 'lcd-meeting-notes'); ?></h3>
-                <div class="lcd-modal-body">
-                    <p>
-                        <label for="new_person_first_name"><?php _e('First Name', 'lcd-meeting-notes'); ?></label><br>
-                        <input type="text" id="new_person_first_name" class="widefat">
-                    </p>
-                    <p>
-                        <label for="new_person_last_name"><?php _e('Last Name', 'lcd-meeting-notes'); ?></label><br>
-                        <input type="text" id="new_person_last_name" class="widefat">
-                    </p>
-                </div>
-                <div class="lcd-modal-footer">
-                    <button type="button" class="button button-primary" id="save-new-person"><?php _e('Add Person', 'lcd-meeting-notes'); ?></button>
-                    <button type="button" class="button" id="cancel-new-person"><?php _e('Cancel', 'lcd-meeting-notes'); ?></button>
-                </div>
-            </div>
-        </div>
-
-        <style>
-            .select2-container {
-                width: 100% !important;
-            }
-            .select2-results__option--person {
-                color: #2271b1;
-            }
-            .select2-results__option--free-text {
-                font-style: italic;
-            }
-            .lcd-modal {
-                display: none;
-                position: fixed;
-                z-index: 100000;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0,0,0,0.4);
-            }
-            .lcd-modal-content {
-                background-color: #fefefe;
-                margin: 15% auto;
-                padding: 20px;
-                border: 1px solid #ddd;
-                width: 400px;
-                max-width: 90%;
-                border-radius: 4px;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            }
-            .lcd-modal-footer {
-                margin-top: 20px;
-                text-align: right;
-            }
-            .lcd-modal-footer .button {
-                margin-left: 10px;
-            }
-        </style>
-        <?php
-    }
-
-    /**
-     * Meeting agenda callback
-     */
-    public function meeting_agenda_callback($post) {
-        wp_nonce_field('lcd_meeting_notes_nonce', 'meeting_notes_nonce');
-        
-        // Get saved agenda PDF ID
+        // Get saved file IDs
         $agenda_pdf_id = get_post_meta($post->ID, '_meeting_agenda_pdf', true);
-        $has_agenda = !empty($agenda_pdf_id);
+        $notes_pdf_id = get_post_meta($post->ID, '_meeting_notes_pdf', true);
         
-        // Get PDF URL if exists
-        $pdf_url = $has_agenda ? wp_get_attachment_url($agenda_pdf_id) : '';
-        $pdf_filename = $has_agenda ? basename(get_attached_file($agenda_pdf_id)) : '';
+        $has_agenda = !empty($agenda_pdf_id);
+        $has_notes = !empty($notes_pdf_id);
+        
+        // Get PDF URLs if they exist
+        $agenda_url = $has_agenda ? wp_get_attachment_url($agenda_pdf_id) : '';
+        $agenda_filename = $has_agenda ? basename(get_attached_file($agenda_pdf_id)) : '';
+        
+        $notes_url = $has_notes ? wp_get_attachment_url($notes_pdf_id) : '';
+        $notes_filename = $has_notes ? basename(get_attached_file($notes_pdf_id)) : '';
         ?>
-        <div class="meeting-agenda-wrapper">
-            <div class="agenda-upload-section">
-                <?php if ($has_agenda): ?>
-                    <div class="current-agenda">
-                        <p>
-                            <strong><?php _e('Current Agenda:', 'lcd-meeting-notes'); ?></strong>
-                            <span class="filename"><?php echo esc_html($pdf_filename); ?></span>
-                        </p>
-                        <div class="agenda-actions">
-                            <a href="<?php echo esc_url($pdf_url); ?>" class="button" target="_blank">
-                                <?php _e('View PDF', 'lcd-meeting-notes'); ?>
-                            </a>
-                            <button type="button" class="button remove-agenda">
-                                <?php _e('Remove', 'lcd-meeting-notes'); ?>
-                            </button>
+        <div class="meeting-files-wrapper">
+            <!-- Agenda Section -->
+            <div class="meeting-agenda-wrapper file-upload-wrapper">
+                <h3><?php _e('Meeting Agenda', 'lcd-meeting-notes'); ?></h3>
+                <div class="agenda-upload-section">
+                    <?php if ($has_agenda): ?>
+                        <div class="current-file">
+                            <p>
+                                <strong><?php _e('Current Agenda:', 'lcd-meeting-notes'); ?></strong>
+                                <span class="filename"><?php echo esc_html($agenda_filename); ?></span>
+                            </p>
+                            <div class="file-actions">
+                                <a href="<?php echo esc_url($agenda_url); ?>" class="button" target="_blank">
+                                    <?php _e('View PDF', 'lcd-meeting-notes'); ?>
+                                </a>
+                                <button type="button" class="button remove-file">
+                                    <?php _e('Remove', 'lcd-meeting-notes'); ?>
+                                </button>
+                            </div>
                         </div>
+                    <?php endif; ?>
+                    
+                    <div class="upload-new-file" <?php echo $has_agenda ? 'style="display:none;"' : ''; ?>>
+                        <p class="description">
+                            <?php _e('Upload a PDF file containing the meeting agenda.', 'lcd-meeting-notes'); ?>
+                        </p>
+                        <input type="file" 
+                               name="file" 
+                               accept=".pdf"
+                               style="display:none;">
+                        <input type="hidden" 
+                               name="agenda_pdf_id" 
+                               value="<?php echo esc_attr($agenda_pdf_id); ?>">
+                        <button type="button" class="button button-primary select-file">
+                            <?php _e('Select PDF', 'lcd-meeting-notes'); ?>
+                        </button>
                     </div>
-                <?php endif; ?>
-                
-                <div class="upload-new-agenda" <?php echo $has_agenda ? 'style="display:none;"' : ''; ?>>
-                    <p class="description">
-                        <?php _e('Upload a PDF file containing the meeting agenda.', 'lcd-meeting-notes'); ?>
-                    </p>
-                    <input type="file" 
-                           id="agenda_pdf" 
-                           name="agenda_pdf" 
-                           accept=".pdf"
-                           style="display:none;">
-                    <input type="hidden" 
-                           name="agenda_pdf_id" 
-                           id="agenda_pdf_id" 
-                           value="<?php echo esc_attr($agenda_pdf_id); ?>">
-                    <button type="button" class="button button-primary select-pdf">
-                        <?php _e('Select PDF', 'lcd-meeting-notes'); ?>
-                    </button>
-                </div>
 
-                <div class="upload-progress" style="display:none;">
-                    <div class="progress-bar">
-                        <div class="progress-bar-fill"></div>
+                    <div class="upload-progress" style="display:none;">
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill"></div>
+                        </div>
+                        <p class="progress-text"></p>
                     </div>
-                    <p class="progress-text"></p>
+                </div>
+            </div>
+
+            <!-- Meeting Notes Section -->
+            <div class="meeting-notes-wrapper file-upload-wrapper">
+                <h3><?php _e('Meeting Notes', 'lcd-meeting-notes'); ?></h3>
+                <div class="notes-upload-section">
+                    <?php if ($has_notes): ?>
+                        <div class="current-file">
+                            <p>
+                                <strong><?php _e('Current Notes:', 'lcd-meeting-notes'); ?></strong>
+                                <span class="filename"><?php echo esc_html($notes_filename); ?></span>
+                            </p>
+                            <div class="file-actions">
+                                <a href="<?php echo esc_url($notes_url); ?>" class="button" target="_blank">
+                                    <?php _e('View PDF', 'lcd-meeting-notes'); ?>
+                                </a>
+                                <button type="button" class="button remove-file">
+                                    <?php _e('Remove', 'lcd-meeting-notes'); ?>
+                                </button>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div class="upload-new-file" <?php echo $has_notes ? 'style="display:none;"' : ''; ?>>
+                        <p class="description">
+                            <?php _e('Upload a PDF file containing the meeting notes.', 'lcd-meeting-notes'); ?>
+                        </p>
+                        <input type="file" 
+                               name="file" 
+                               accept=".pdf"
+                               style="display:none;">
+                        <input type="hidden" 
+                               name="notes_pdf_id" 
+                               value="<?php echo esc_attr($notes_pdf_id); ?>">
+                        <button type="button" class="button button-primary select-file">
+                            <?php _e('Select PDF', 'lcd-meeting-notes'); ?>
+                        </button>
+                    </div>
+
+                    <div class="upload-progress" style="display:none;">
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill"></div>
+                        </div>
+                        <p class="progress-text"></p>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <style>
-            .meeting-agenda-wrapper {
-                padding: 10px;
-            }
-            .current-agenda {
-                background: #f0f0f1;
-                padding: 15px;
-                border-radius: 4px;
-                margin-bottom: 15px;
-            }
-            .current-agenda p {
-                margin: 0 0 10px;
-            }
-            .current-agenda .filename {
-                font-family: monospace;
-                margin-left: 5px;
-            }
-            .agenda-actions {
-                display: flex;
-                gap: 10px;
-            }
-            .upload-progress {
-                margin-top: 15px;
-            }
-            .progress-bar {
-                height: 20px;
-                background-color: #f0f0f1;
-                border-radius: 10px;
-                overflow: hidden;
-                margin-bottom: 5px;
-            }
-            .progress-bar-fill {
-                height: 100%;
-                background-color: #2271b1;
-                width: 0;
-                transition: width 0.3s ease;
-            }
-            .progress-text {
-                font-size: 12px;
-                color: #666;
-                margin: 0;
-            }
-        </style>
         <?php
     }
 
@@ -466,8 +363,6 @@ class LCD_Meeting_Notes {
      * Facebook event callback
      */
     public function meeting_facebook_callback($post) {
-        wp_nonce_field('lcd_meeting_notes_nonce', 'meeting_notes_nonce');
-        
         $facebook_url = get_post_meta($post->ID, '_facebook_event_url', true);
         ?>
         <div class="facebook-event-wrapper">
@@ -502,118 +397,6 @@ class LCD_Meeting_Notes {
             }
         </style>
         <?php
-    }
-
-    /**
-     * Handle PDF export
-     */
-    public function handle_pdf_export() {
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'lcd_meeting_export_nonce')) {
-            wp_send_json_error(array('message' => __('Invalid nonce', 'lcd-meeting-notes')));
-        }
-
-        $post_id = intval($_POST['post_id']);
-        $action = isset($_POST['action_type']) ? sanitize_text_field($_POST['action_type']) : 'preview';
-
-        $export = LCD_Meeting_Notes_Export::get_instance();
-        $result = $export->generate_pdf($post_id);
-
-        if (is_wp_error($result)) {
-            wp_send_json_error(array('message' => $result->get_error_message()));
-        }
-
-        wp_send_json_success(array(
-            'url' => $result['url'],
-            'filename' => $result['filename']
-        ));
-    }
-
-    /**
-     * Handle email generation
-     */
-    public function handle_email_generation() {
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'lcd_meeting_export_nonce')) {
-            wp_send_json_error(array('message' => __('Invalid nonce', 'lcd-meeting-notes')));
-        }
-
-        $post_id = intval($_POST['post_id']);
-        $to = sanitize_email($_POST['to']);
-        $subject = isset($_POST['subject']) ? sanitize_text_field($_POST['subject']) : '';
-        $include_pdf = isset($_POST['include_pdf']) ? (bool)$_POST['include_pdf'] : false;
-        $include_notes = isset($_POST['include_notes']) ? (bool)$_POST['include_notes'] : true;
-        $custom_message = isset($_POST['message']) ? sanitize_textarea_field($_POST['message']) : '';
-
-        if (!is_email($to)) {
-            wp_send_json_error(array('message' => __('Invalid email address', 'lcd-meeting-notes')));
-        }
-
-        if (!$include_pdf && !$include_notes) {
-            wp_send_json_error(array('message' => __('Please include either the PDF attachment or notes in the email body', 'lcd-meeting-notes')));
-        }
-
-        $export = LCD_Meeting_Notes_Export::get_instance();
-        $result = $export->send_email($post_id, $to, $subject, $include_pdf, $include_notes, $custom_message);
-
-        if (is_wp_error($result)) {
-            wp_send_json_error(array('message' => $result->get_error_message()));
-        }
-
-        wp_send_json_success(array('message' => __('Email sent successfully', 'lcd-meeting-notes')));
-    }
-
-    /**
-     * Check if LCD People plugin is active
-     */
-    private function is_people_plugin_active() {
-        return class_exists('LCD_People');
-    }
-
-    /**
-     * AJAX handler for people search
-     */
-    public function ajax_search_people() {
-        check_ajax_referer('lcd_meeting_notes_nonce', 'nonce');
-
-        if (!current_user_can('edit_posts')) {
-            wp_die(-1);
-        }
-
-        $search = sanitize_text_field($_GET['q']);
-        $results = array();
-
-        if ($this->is_people_plugin_active()) {
-            // Search for existing people records
-            $args = array(
-                'post_type' => 'lcd_person',
-                'posts_per_page' => 10,
-                's' => $search,
-                'orderby' => 'title',
-                'order' => 'ASC'
-            );
-
-            $query = new WP_Query($args);
-
-            if ($query->have_posts()) {
-                while ($query->have_posts()) {
-                    $query->the_post();
-                    $results[] = array(
-                        'id' => 'person_' . get_the_ID(),
-                        'text' => get_the_title(),
-                        'type' => 'person'
-                    );
-                }
-            }
-            wp_reset_postdata();
-        }
-
-        // Always add the search term as a free text option
-        $results[] = array(
-            'id' => 'text_' . $search,
-            'text' => $search,
-            'type' => 'free_text'
-        );
-
-        wp_send_json($results);
     }
 
     /**
@@ -674,7 +457,7 @@ class LCD_Meeting_Notes {
     }
 
     /**
-     * Save meeting notes meta and update title
+     * Save meeting notes meta
      */
     public function save_meeting_notes_meta($post_id) {
         // Verify this is our post type
@@ -707,16 +490,19 @@ class LCD_Meeting_Notes {
             update_post_meta($post_id, '_meeting_time', sanitize_text_field($_POST['meeting_time']));
         }
 
-        // Save attendees
-        if (isset($_POST['attendees'])) {
-            update_post_meta($post_id, '_attendees', sanitize_textarea_field($_POST['attendees']));
-        }
-
         // Save agenda PDF ID
         if (isset($_POST['agenda_pdf_id'])) {
             $pdf_id = intval($_POST['agenda_pdf_id']);
             if ($pdf_id > 0 || empty($_POST['agenda_pdf_id'])) {
                 update_post_meta($post_id, '_meeting_agenda_pdf', $pdf_id);
+            }
+        }
+
+        // Save notes PDF ID
+        if (isset($_POST['notes_pdf_id'])) {
+            $pdf_id = intval($_POST['notes_pdf_id']);
+            if ($pdf_id > 0 || empty($_POST['notes_pdf_id'])) {
+                update_post_meta($post_id, '_meeting_notes_pdf', $pdf_id);
             }
         }
 
@@ -815,44 +601,19 @@ class LCD_Meeting_Notes {
             if (isset($post) && $post->post_type == 'meeting_notes') {
                 wp_enqueue_script('jquery');
 
-                // Enqueue Select2
-                wp_enqueue_style(
-                    'select2',
-                    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
-                    array(),
-                    '4.1.0-rc.0'
-                );
-                
-                wp_enqueue_script(
-                    'select2',
-                    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
-                    array('jquery'),
-                    '4.1.0-rc.0',
-                    true
-                );
-
                 // Enqueue main admin script
                 wp_enqueue_script(
                     'lcd-meeting-notes-admin',
                     plugins_url('assets/js/admin.js', __FILE__),
-                    array('jquery', 'select2'),
-                    '1.0.0',
-                    true
-                );
-
-                // Enqueue agenda script
-                wp_enqueue_script(
-                    'lcd-meeting-notes-agenda',
-                    plugins_url('assets/js/agenda.js', __FILE__),
                     array('jquery'),
                     '1.0.0',
                     true
                 );
 
-                // Enqueue exports script
+                // Enqueue file uploads script
                 wp_enqueue_script(
-                    'lcd-meeting-notes-exports',
-                    plugins_url('assets/js/exports.js', __FILE__),
+                    'lcd-meeting-notes-file-uploads',
+                    plugins_url('assets/js/file-uploads.js', __FILE__),
                     array('jquery'),
                     '1.0.0',
                     true
@@ -861,112 +622,17 @@ class LCD_Meeting_Notes {
                 // Add localization for JavaScript
                 wp_localize_script('lcd-meeting-notes-admin', 'meetingNotesL10n', array(
                     'validationMessage' => __('Please select both a Meeting Type and Date before publishing.', 'lcd-meeting-notes'),
-                    'searchPlaceholder' => __('Type to search for people or enter names...', 'lcd-meeting-notes'),
-                    'modalTitle' => __('Add New Person', 'lcd-meeting-notes'),
-                    'firstNameRequired' => __('First name is required', 'lcd-meeting-notes'),
-                    'lastNameRequired' => __('Last name is required', 'lcd-meeting-notes'),
                     'ajaxurl' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('lcd_meeting_notes_nonce'),
-                    'peopleLookupEnabled' => $this->is_people_plugin_active()
-                ));
-
-                // Add localization for exports script
-                wp_localize_script('lcd-meeting-notes-exports', 'exportsL10n', array(
-                    'exportError' => __('Failed to export. Please try again.', 'lcd-meeting-notes'),
-                    'emailRequired' => __('Please enter a recipient email address.', 'lcd-meeting-notes'),
-                    'emailError' => __('Failed to send email. Please try again.', 'lcd-meeting-notes'),
-                    'sending' => __('Sending...', 'lcd-meeting-notes'),
-                    'sendEmail' => __('Send', 'lcd-meeting-notes'),
-                    'downloadPDF' => __('Download PDF', 'lcd-meeting-notes'),
-                    'previewPDF' => __('Preview PDF', 'lcd-meeting-notes')
+                    'nonce' => wp_create_nonce('lcd_meeting_notes_nonce')
                 ));
             }
         }
     }
 
     /**
-     * Show FPDF installation notice
+     * Handle file upload
      */
-    public function show_fpdf_notice() {
-        if (!current_user_can('manage_options')) {
-            return;
-        }
-        ?>
-        <div class="notice notice-warning is-dismissible">
-            <p>
-                <?php _e('FPDF library is required for PDF generation in Meetings.', 'lcd-meeting-notes'); ?>
-                <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=meeting-notes&action=install_fpdf'), 'install_fpdf'); ?>" class="button button-primary">
-                    <?php _e('Install Now', 'lcd-meeting-notes'); ?>
-                </a>
-            </p>
-        </div>
-        <?php
-    }
-
-    /**
-     * Handle FPDF installation
-     */
-    public function handle_fpdf_install() {
-        if (!isset($_GET['action']) || $_GET['action'] !== 'install_fpdf') {
-            return;
-        }
-
-        if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to install libraries.', 'lcd-meeting-notes'));
-        }
-
-        check_admin_referer('install_fpdf');
-
-        $result = LCD_FPDF_Setup::install();
-
-        if (is_wp_error($result)) {
-            wp_die($result->get_error_message());
-        }
-
-        wp_redirect(admin_url('edit.php?post_type=meeting_notes&fpdf_installed=1'));
-        exit;
-    }
-
-    public function ajax_create_person() {
-        check_ajax_referer('lcd_meeting_notes_nonce', 'nonce');
-
-        if (!current_user_can('edit_posts')) {
-            wp_send_json_error(array('message' => __('Permission denied', 'lcd-meeting-notes')));
-        }
-
-        $first_name = sanitize_text_field($_POST['first_name']);
-        $last_name = sanitize_text_field($_POST['last_name']);
-
-        if (empty($first_name) || empty($last_name)) {
-            wp_send_json_error(array('message' => __('First and last name are required', 'lcd-meeting-notes')));
-        }
-
-        // Create new person post
-        $person_id = wp_insert_post(array(
-            'post_type' => 'lcd_person',
-            'post_status' => 'publish',
-            'post_title' => $first_name . ' ' . $last_name
-        ));
-
-        if (is_wp_error($person_id)) {
-            wp_send_json_error(array('message' => $person_id->get_error_message()));
-        }
-
-        // Add first and last name meta
-        update_post_meta($person_id, '_lcd_person_first_name', $first_name);
-        update_post_meta($person_id, '_lcd_person_last_name', $last_name);
-
-        wp_send_json_success(array(
-            'id' => 'person_' . $person_id,
-            'text' => $first_name . ' ' . $last_name,
-            'type' => 'person'
-        ));
-    }
-
-    /**
-     * Handle agenda PDF upload
-     */
-    public function handle_agenda_pdf_upload() {
+    public function handle_file_upload() {
         // Verify nonce
         check_ajax_referer('lcd_meeting_notes_nonce', 'nonce');
 
@@ -976,11 +642,11 @@ class LCD_Meeting_Notes {
         }
 
         // Check if file was uploaded
-        if (!isset($_FILES['agenda_pdf'])) {
+        if (!isset($_FILES['file'])) {
             wp_send_json_error(array('message' => __('No file was uploaded', 'lcd-meeting-notes')));
         }
 
-        $file = $_FILES['agenda_pdf'];
+        $file = $_FILES['file'];
 
         // Verify file type
         $file_type = wp_check_filetype(basename($file['name']), array('pdf' => 'application/pdf'));
@@ -1021,25 +687,60 @@ class LCD_Meeting_Notes {
     }
 
     /**
-     * Plugin activation
+     * Handle redirection of single meeting notes to their PDF
      */
-    public static function activate() {
-        // Create necessary database tables
-        self::create_tables();
-
-        // Flush rewrite rules
-        flush_rewrite_rules();
+    public function handle_single_meeting_redirect() {
+        if (is_singular('meeting_notes')) {
+            $post_id = get_the_ID();
+            $notes_pdf_id = get_post_meta($post_id, '_meeting_notes_pdf', true);
+            
+            if (!empty($notes_pdf_id)) {
+                $pdf_url = wp_get_attachment_url($notes_pdf_id);
+                if ($pdf_url) {
+                    wp_redirect($pdf_url);
+                    exit;
+                }
+            }
+            
+            // If no PDF, redirect to archive
+            wp_redirect(get_post_type_archive_link('meeting_notes'));
+            exit;
+        }
     }
 
     /**
-     * Create necessary database tables
+     * Load custom archive template for meeting notes
      */
-    private static function create_tables() {
-        global $wpdb;
+    public function load_meeting_archive_template($template) {
+        if (is_post_type_archive('meeting_notes')) {
+            $custom_template = plugin_dir_path(__FILE__) . 'templates/archive-meeting-notes.php';
+            if (file_exists($custom_template)) {
+                return $custom_template;
+            }
+        }
+        return $template;
+    }
 
-        $charset_collate = $wpdb->get_charset_collate();
+    /**
+     * Order meetings by date in descending order
+     */
+    public function order_meetings_by_date($query) {
+        if (!is_admin() && $query->is_main_query() && is_post_type_archive('meeting_notes')) {
+            $query->set('meta_key', '_meeting_date');
+            $query->set('orderby', array(
+                '_meeting_date' => 'DESC',
+                '_meeting_time' => 'DESC'
+            ));
+            $query->set('posts_per_page', 20); // Show more meetings per page
+        }
+    }
 
-        // No custom tables needed at this time
+    /**
+     * Plugin activation
+     */
+    public static function activate() {
+        // Flush rewrite rules
+        flush_rewrite_rules();
     }
 
     /**
