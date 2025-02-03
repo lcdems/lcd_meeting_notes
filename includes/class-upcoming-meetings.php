@@ -291,9 +291,11 @@ class LCD_Upcoming_Meetings {
             // Meeting actions
             $output .= '<div class="meeting-actions">';
             
+            // Calendar and RSVP links wrapper
+            $output .= '<div class="calendar-rsvp-links">';
+            
             // Calendar links
             if (!empty($calendar_links)) {
-                $output .= '<div class="calendar-links">';
                 if (isset($calendar_links['google'])) {
                     $output .= '<a href="' . esc_url($calendar_links['google']) . '" class="calendar-link google" target="_blank">';
                     $output .= '<i class="dashicons dashicons-calendar-alt"></i> ' . __('Add to Google Calendar', 'lcd-meeting-notes');
@@ -304,7 +306,6 @@ class LCD_Upcoming_Meetings {
                     $output .= '<i class="dashicons dashicons-calendar-alt"></i> ' . __('Add to Apple Calendar', 'lcd-meeting-notes');
                     $output .= '</a>';
                 }
-                $output .= '</div>';
             }
 
             // Facebook RSVP button
@@ -313,7 +314,8 @@ class LCD_Upcoming_Meetings {
                 $output .= '<i class="dashicons dashicons-facebook"></i> RSVP on Facebook';
                 $output .= '</a>';
             }
-
+            
+            $output .= '</div>'; // End calendar-rsvp-links
             $output .= '</div>'; // End meeting-actions
             $output .= '</div>'; // End upcoming-meeting
         }
@@ -336,11 +338,21 @@ class LCD_Upcoming_Meetings {
                 
                 $datetime = new DateTime($meeting_date . ' ' . $meeting_time);
                 $formatted_date = $datetime->format('F j, Y');
+                $formatted_time = $datetime->format('g:i A');
+
+                // Get meeting types
+                $meeting_types = wp_get_object_terms($past_meeting->ID, 'meeting_type');
+                $type_names = array_map(function($term) {
+                    return $term->name;
+                }, $meeting_types);
                 
                 $output .= '<div class="past-meeting-item">';
                 $output .= '<div class="past-meeting-info">';
-                $output .= '<span class="past-meeting-date">' . $formatted_date . '</span>';
-                $output .= '<h3 class="past-meeting-title">' . esc_html($past_meeting->post_title) . '</h3>';
+                $output .= '<div class="meeting-meta">';
+                $output .= '<span class="meeting-date"><i class="dashicons dashicons-calendar-alt"></i> ' . $formatted_date . '</span>';
+                $output .= '<span class="meeting-datetime"><i class="dashicons dashicons-clock"></i> ' . $formatted_time . '</span>';
+                $output .= '</div>';
+                $output .= '<h3 class="meeting-title">' . implode(' & ', $type_names) . ' Meeting</h3>';
                 $output .= '</div>';
                 
                 $output .= '<div class="meeting-actions">';

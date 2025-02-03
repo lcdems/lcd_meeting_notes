@@ -72,18 +72,12 @@ class LCD_Meeting_Notes {
     public function make_title_readonly() {
         global $post;
         if (isset($post) && $post->post_type === 'meeting_notes') {
-            ?>
-            <style>
-                #title {
+            wp_add_inline_style('lcd-meeting-notes-admin', '
+                #title, .editor-post-title__input {
                     background: #f0f0f1 !important;
                     pointer-events: none !important;
                 }
-                .editor-post-title__input {
-                    background: #f0f0f1 !important;
-                    pointer-events: none !important;
-                }
-            </style>
-            <?php
+            ');
         }
     }
 
@@ -285,14 +279,14 @@ class LCD_Meeting_Notes {
                         </div>
                     <?php endif; ?>
                     
-                    <div class="upload-new-file" <?php echo $has_agenda ? 'style="display:none;"' : ''; ?>>
+                    <div class="upload-new-file<?php echo $has_agenda ? ' hidden' : ''; ?>">
                         <p class="description">
                             <?php _e('Upload a PDF file containing the meeting agenda.', 'lcd-meeting-notes'); ?>
                         </p>
                         <input type="file" 
                                name="file" 
                                accept=".pdf"
-                               style="display:none;">
+                               class="hidden">
                         <input type="hidden" 
                                name="agenda_pdf_id" 
                                value="<?php echo esc_attr($agenda_pdf_id); ?>">
@@ -301,7 +295,7 @@ class LCD_Meeting_Notes {
                         </button>
                     </div>
 
-                    <div class="upload-progress" style="display:none;">
+                    <div class="upload-progress hidden">
                         <div class="progress-bar">
                             <div class="progress-bar-fill"></div>
                         </div>
@@ -331,14 +325,14 @@ class LCD_Meeting_Notes {
                         </div>
                     <?php endif; ?>
                     
-                    <div class="upload-new-file" <?php echo $has_notes ? 'style="display:none;"' : ''; ?>>
+                    <div class="upload-new-file<?php echo $has_notes ? ' hidden' : ''; ?>">
                         <p class="description">
                             <?php _e('Upload a PDF file containing the meeting notes.', 'lcd-meeting-notes'); ?>
                         </p>
                         <input type="file" 
                                name="file" 
                                accept=".pdf"
-                               style="display:none;">
+                               class="hidden">
                         <input type="hidden" 
                                name="notes_pdf_id" 
                                value="<?php echo esc_attr($notes_pdf_id); ?>">
@@ -347,7 +341,7 @@ class LCD_Meeting_Notes {
                         </button>
                     </div>
 
-                    <div class="upload-progress" style="display:none;">
+                    <div class="upload-progress hidden">
                         <div class="progress-bar">
                             <div class="progress-bar-fill"></div>
                         </div>
@@ -600,6 +594,14 @@ class LCD_Meeting_Notes {
         if ($hook == 'post-new.php' || $hook == 'post.php') {
             if (isset($post) && $post->post_type == 'meeting_notes') {
                 wp_enqueue_script('jquery');
+
+                // Enqueue admin styles
+                wp_enqueue_style(
+                    'lcd-meeting-notes-admin',
+                    plugins_url('assets/css/admin.css', __FILE__),
+                    array(),
+                    '1.0.0'
+                );
 
                 // Enqueue main admin script
                 wp_enqueue_script(

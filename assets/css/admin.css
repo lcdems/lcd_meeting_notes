@@ -1,0 +1,65 @@
+/* File Upload Sections */
+.meeting-files-wrapper {
+    margin: 20px 0;
+}
+
+.file-upload-wrapper {
+    margin-bottom: 30px;
+}
+
+.file-upload-wrapper h3 {
+    margin: 0 0 15px;
+    padding: 0;
+}
+
+.current-file {
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.current-file p {
+    margin: 0 0 10px;
+}
+
+.file-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.upload-new-file .description {
+    margin-bottom: 15px;
+}
+
+/* Progress Bar */
+.upload-progress {
+    margin-top: 15px;
+}
+
+.progress-bar {
+    height: 20px;
+    background: #f0f0f1;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: #0073aa;
+    width: 0;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    margin: 5px 0 0;
+    font-size: 0.9em;
+    color: #666;
+}
+
+/* Utility Classes */
+.hidden {
+    display: none !important;
+} 

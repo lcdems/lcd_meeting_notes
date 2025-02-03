@@ -13,7 +13,7 @@ get_header(); ?>
             <header class="page-header">
                 <h1 class="page-title"><?php _e('Meeting Notes Archive', 'lcd-meeting-notes'); ?></h1>
             </header>
-            <div style="text-align: center;"><a href="<?php echo home_url(); ?>/meetings" class="back-to-meetings">< Back to Meetings</a></div>
+            <div class="back-to-meetings-wrapper"><a href="<?php echo home_url(); ?>/meetings" class="back-to-meetings">< Back to Meetings</a></div>
 
             <?php if (have_posts()) : ?>
                 <div class="meeting-notes-archive">
@@ -41,11 +41,11 @@ get_header(); ?>
                             }
 
                             // Format meeting date and time
-                            $formatted_date = $date->format('F j');
-                            $time = '';
+                            $formatted_date = $date->format('F j, Y');
+                            $formatted_time = '';
                             if ($meeting_time) {
                                 $datetime = new DateTime($meeting_date . ' ' . $meeting_time);
-                                $time = $datetime->format('g:i A');
+                                $formatted_time = $datetime->format('g:i A');
                             }
 
                             // Get meeting types
@@ -59,14 +59,16 @@ get_header(); ?>
                                 <div class="meeting-info">
                                     <div class="meeting-meta">
                                         <span class="meeting-date">
+                                            <i class="dashicons dashicons-calendar-alt"></i>
                                             <?php echo esc_html($formatted_date); ?>
-                                            <?php if ($time) : ?>
-                                                <span class="meeting-time"><?php echo esc_html($time); ?></span>
-                                            <?php endif; ?>
+                                        </span>
+                                        <span class="meeting-datetime">
+                                            <i class="dashicons dashicons-clock"></i>
+                                            <?php echo esc_html($formatted_time); ?>
                                         </span>
                                     </div>
                                     <h3 class="meeting-title">
-                                        <?php echo esc_html(implode(' & ', $type_names)); ?> Meeting
+                                        <?php echo esc_html(implode(' & ', $type_names) . ' Meeting'); ?>
                                     </h3>
                                 </div>
 
