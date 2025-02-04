@@ -49,7 +49,7 @@ class LCD_Meeting_Notes {
         add_action('admin_notices', array($this, 'show_validation_notice'));
         add_action('template_redirect', array($this, 'handle_single_meeting_redirect'));
         add_filter('archive_template', array($this, 'load_meeting_archive_template'));
-        add_action('pre_get_posts', array($this, 'order_meetings_by_date'));
+        add_action('pre_get_posts', array($this, 'modify_meetings_query'));
         
         // Add title field modifications
         add_filter('enter_title_here', array($this, 'change_title_placeholder'), 10, 2);
@@ -836,16 +836,25 @@ class LCD_Meeting_Notes {
     }
 
     /**
-     * Order meetings by date in descending order
+     * Modify the main query for meetings
      */
-    public function order_meetings_by_date($query) {
+    public function modify_meetings_query($query) {
+        // Only modify the main query for meeting notes archive on the frontend
         if (!is_admin() && $query->is_main_query() && is_post_type_archive('meeting_notes')) {
-            $query->set('meta_key', '_meeting_date');
+            // Show only past meetings in the archive
+            $query->set('meta_query', array(
+                array(
+                    'key' => '_meeting_date',
+                    'value' => current_time('Y-m-d'),
+                    'compare' => '<',
+                    'type' => 'DATE'
+                )
+            ));
             $query->set('orderby', array(
                 '_meeting_date' => 'DESC',
                 '_meeting_time' => 'DESC'
             ));
-            $query->set('posts_per_page', 20); // Show more meetings per page
+            $query->set('meta_key', '_meeting_date');
         }
     }
 
