@@ -23,44 +23,56 @@
 .meeting-details {
     color: #666;
     line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .meeting-datetime {
     display: flex;
-    gap: 20px;
-    margin-bottom: 10px;
     flex-wrap: wrap;
+    gap: 20px;
 }
 
 .meeting-date,
-.meeting-time,
-.meeting-location {
+.meeting-time {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    line-height: normal;
+    gap: 6px;
+    font-size: 1.1em;
+    color: #1a1a1a;
 }
 
 .meeting-location {
-    margin-bottom: 10px;
+    display: flex;
     flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
 }
 
-.meeting-location span {
-    flex: 1;
-    min-width: 200px;
+.meeting-location-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 300px;
 }
 
-.directions-link {
+.meeting-location .directions-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     color: #0073aa;
     text-decoration: none;
-    margin-left: 5px;
-    white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: 3px;
+    background: #f0f0f1;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
 }
 
-.directions-link:hover {
+.meeting-location .directions-link:hover {
+    background: #e5e5e5;
     color: #00a0d2;
-    text-decoration: underline;
 }
 
 /* Agenda Section */
@@ -226,6 +238,10 @@
         font-size: 1.4em;
     }
 
+    .meeting-details {
+        gap: 16px;
+    }
+
     .meeting-datetime {
         flex-direction: column;
         gap: 8px;
@@ -233,21 +249,21 @@
 
     .meeting-date,
     .meeting-time {
-        font-size: 1.1em;
+        font-size: 1em;
     }
 
     .meeting-location {
-        margin-top: 5px;
-        gap: 8px;
+        flex-direction: column;
+        gap: 10px;
     }
 
-    .meeting-location span {
-        min-width: 0;
+    .meeting-location-text {
+        flex: 1 1 100%;
+    }
+
+    .meeting-location .directions-link {
         width: 100%;
-    }
-
-    .directions-link {
-        margin-left: 24px;
+        justify-content: center;
     }
 
     .meeting-actions {

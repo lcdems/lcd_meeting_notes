@@ -268,14 +268,16 @@ class LCD_Upcoming_Meetings {
 
             if ($location) {
                 $output .= '<div class="meeting-location">';
-                $output .= '<i class="dashicons dashicons-location"></i> ';
+                $output .= '<div class="meeting-location-text">';
+                $output .= '<i class="dashicons dashicons-location"></i>';
                 $output .= '<span>' . esc_html($location['name']);
                 if ($location['address']) {
                     $output .= ' - ' . esc_html($location['address']);
                 }
                 $output .= '</span>';
+                $output .= '</div>';
                 if ($location['maps_url']) {
-                    $output .= ' <a href="' . esc_url($location['maps_url']) . '" class="directions-link" target="_blank">';
+                    $output .= '<a href="' . esc_url($location['maps_url']) . '" class="directions-link" target="_blank">';
                     $output .= '<i class="dashicons dashicons-external"></i> ' . __('Get Directions', 'lcd-meeting-notes');
                     $output .= '</a>';
                 }

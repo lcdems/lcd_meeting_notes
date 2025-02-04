@@ -108,7 +108,7 @@
 
 .meeting-meta {
     display: flex;
-    align-items: baseline;
+    align-items: baseline!important;
     gap: 1rem;
     color: var(--color-text);
     font-size: var(--font-size-base);
