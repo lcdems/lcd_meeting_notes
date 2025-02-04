@@ -1,3 +1,4 @@
+/* Base Meeting Styles */
 .upcoming-meeting {
     background: #fff;
     border: 1px solid #ddd;
@@ -5,21 +6,27 @@
     padding: 20px;
     margin-bottom: 20px;
 }
-.upcoming-meeting .meeting-agenda-section h3 {
-    margin-top: 0!important;
-}
+
+/* Meeting Header */
 .meeting-header {
     margin-bottom: 20px;
 }
 
-.meeting-header h2 {
+.meeting-header h2,
+.meeting-title {
     margin: 0 0 15px 0;
     padding: 0;
     color: #1a1a1a;
-    font-size: 1.6em;
+    font-size: 1.1em;
     line-height: 1.3;
+    font-weight: 600;
 }
 
+.meeting-header h2 {
+    font-size: 1.6em;
+}
+
+/* Meeting Details */
 .meeting-details {
     color: #666;
     line-height: 1.6;
@@ -35,14 +42,22 @@
 }
 
 .meeting-date,
-.meeting-time {
+.meeting-time,
+.meeting-datetime {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    font-size: 0.95em;
+    color: #666;
+}
+
+.meeting-date,
+.meeting-time {
     font-size: 1.1em;
     color: #1a1a1a;
 }
 
+/* Meeting Location */
 .meeting-location {
     display: flex;
     flex-wrap: wrap;
@@ -75,134 +90,71 @@
     color: #00a0d2;
 }
 
-/* Agenda Section */
-.meeting-agenda-section {
-    background: #f9f9f9;
-    border: 1px solid #e5e5e5;
-    border-radius: 4px;
-    padding: 15px;
-    margin: 20px 0;
-}
-
-.meeting-agenda-section h3 {
-    margin: 0 0 15px 0;
-    padding: 0;
-    font-size: 1.1em;
-    color: #1a1a1a;
+/* Meeting Meta */
+.meeting-meta {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 15px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    color: var(--color-text);
+    font-size: var(--font-size-base);
 }
 
-.agenda-available .view-agenda {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 12px;
-    background: #0073aa;
-    color: #fff;
-    text-decoration: none;
-    border-radius: 3px;
-    font-size: 0.9em;
-    font-weight: normal;
-    transition: background-color 0.2s ease;
-}
-
-.agenda-available .view-agenda:hover {
-    background: #00a0d2;
-}
-
-.agenda-pending {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    color: #666;
-    font-style: italic;
-    justify-content: center;
-    padding: 8px;
-    font-size: 0.9em;
-}
-
-.meeting-description {
-    margin: 20px 0;
-    line-height: 1.6;
-}
-
+/* Meeting Actions */
 .meeting-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 200px;
     border-top: 1px solid #ddd;
     padding-top: 20px;
     margin-top: 20px;
 }
-
-.view-agenda-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 12px;
-    background: #4CAF50;
-    color: #fff;
-    text-decoration: none;
-    border-radius: 3px;
-    font-size: 0.9em;
-    transition: background-color 0.2s ease;
-    white-space: nowrap;
+.meeting-actions .calendar-rsvp-links {
+    display: flex;
+    gap: 8px;
 }
 
-.view-agenda-link:hover {
+/* Common Button/Link Styles */
+.view-agenda-link,
+.view-notes-link,
+.calendar-link,
+.facebook-rsvp,
+.resource-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+    width: 100%;
+    font-size: 0.9em;
+}
+
+.view-agenda-link,
+.view-agenda {
+    background: #4CAF50;
+    color: white;
+}
+
+.view-agenda-link:hover,
+.view-agenda:hover {
     background: #43A047;
-    color: #fff;
+    color: white;
 }
 
 .view-notes-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 12px;
     background: #0073aa;
-    color: #fff;
-    text-decoration: none;
-    border-radius: 3px;
-    font-size: 0.9em;
-    transition: background-color 0.2s ease;
-    white-space: nowrap;
+    color: white;
 }
 
 .view-notes-link:hover {
     background: #00a0d2;
-    color: #fff;
-}
-
-.notes-pending {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 12px;
-    background: #f0f0f1;
-    color: #666;
-    border-radius: 3px;
-    font-size: 0.9em;
-    font-style: italic;
-    white-space: nowrap;
-}
-
-.calendar-rsvp-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: flex-start;
-}
-
-.calendar-link,
-.facebook-rsvp {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 8px 12px;
-    text-decoration: none;
-    border-radius: 3px;
-    font-size: 0.9em;
-    transition: all 0.2s ease;
-    white-space: nowrap;
+    color: white;
 }
 
 .calendar-link {
@@ -225,61 +177,142 @@
     color: #fff;
 }
 
-.dashicons {
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
-    line-height: 1;
-    vertical-align: text-bottom;
+/* Meeting Formats */
+.meeting-formats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
 }
 
-@media (max-width: 600px) {
-    .meeting-header h2 {
-        font-size: 1.4em;
-    }
+.meeting-format {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #f0f0f1;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 0.9em;
+    color: #1a1a1a;
+    white-space: nowrap;
+}
 
-    .meeting-details {
-        gap: 16px;
-    }
+.meeting-format .dashicons {
+    color: #2D8CFF;
+}
 
-    .meeting-datetime {
-        flex-direction: column;
-        gap: 8px;
-    }
+/* Zoom Meeting Info */
+.meeting-zoom-info {
+    background: #f9f9f9;
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+}
 
-    .meeting-date,
-    .meeting-time {
-        font-size: 1em;
-    }
+.meeting-zoom-info h3 {
+    margin: 0 0 15px 0;
+    padding: 0;
+    font-size: 1.1em;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
 
-    .meeting-location {
-        flex-direction: column;
-        gap: 10px;
-    }
+.zoom-details {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
 
-    .meeting-location-text {
-        flex: 1 1 100%;
-    }
+.zoom-link .join-zoom {
+    background: #2D8CFF;
+    color: #fff;
+}
 
-    .meeting-location .directions-link {
-        width: 100%;
-        justify-content: center;
-    }
+.zoom-link .join-zoom:hover {
+    background: #2681F2;
+}
 
-    .meeting-actions {
-        flex-direction: column;
-    }
+.zoom-credentials {
+    background: #fff;
+    padding: 12px;
+    border-radius: 3px;
+    border: 1px solid #e5e5e5;
+}
 
-    .calendar-rsvp-links {
-        flex-direction: column;
-        width: 100%;
-    }
+.zoom-credentials p {
+    margin: 0 0 8px 0;
+    font-size: 0.95em;
+}
 
-    .calendar-link,
-    .facebook-rsvp {
-        justify-content: center;
-        width: 100%;
-    }
+.zoom-credentials p:last-child {
+    margin: 0;
+}
+
+.zoom-credentials strong {
+    color: #1a1a1a;
+}
+
+.zoom-meta {
+    display: flex;
+    gap: 15px;
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    flex-wrap: wrap;
+}
+
+.zoom-id,
+.zoom-passcode {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.zoom-details-text {
+    font-size: 0.9em;
+    color: #666;
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 4px;
+    line-height: 1.4;
+    margin-top: 5px;
+}
+
+/* Agenda Section */
+.meeting-agenda-section {
+    background: #f9f9f9;
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.meeting-agenda-section h3 {
+    margin: 0 0 15px 0;
+    padding: 0;
+    font-size: 1.1em;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.agenda-pending,
+.notes-pending {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #f0f0f1;
+    color: #666;
+    border-radius: 4px;
+    font-style: italic;
+    width: 100%;
 }
 
 /* Tabs Navigation */
@@ -318,7 +351,6 @@
     background: #fff;
 }
 
-/* Tab Content */
 .lcd-meetings-tabs-content {
     padding: 20px;
 }
@@ -338,112 +370,17 @@
     gap: 1rem;
 }
 
+.meeting-archive-item,
 .past-meeting-item {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background: var(--color-white);
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.past-meeting-info {
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.past-meeting-date {
-    display: block;
-    color: #666;
-    font-size: 0.9em;
-    margin-bottom: 5px;
-}
-
-.past-meeting-title {
-    margin: 0;
-    font-size: 1.1em;
-    color: #1a1a1a;
-}
-
-.meeting-meta {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    color: var(--color-text);
-    font-size: var(--font-size-base);
-}
-
-.meeting-date,
-.meeting-datetime {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.meeting-title {
-    margin: 0;
-    font-size: var(--font-size-base);
-    font-weight: 600;
-    color: var(--color-primary);
-}
-
-.meeting-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.view-agenda-link,
-.view-notes-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #e5e5e5;
     border-radius: 4px;
-    text-decoration: none;
-    transition: background-color 0.2s ease;
-}
-
-.view-agenda-link {
-    background-color: var(--color-primary);
-    color: white;
-}
-
-.view-notes-link {
-    background-color: var(--color-secondary);
-    color: white;
-}
-
-.notes-pending {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    background-color: var(--color-gray-200);
-    color: var(--color-text);
-}
-
-.view-all-meetings {
-    margin-top: 2rem;
-    text-align: center;
-}
-
-.view-all-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    background-color: var(--color-primary);
-    color: white;
-    text-decoration: none;
-    transition: background-color 0.2s ease;
-}
-
-.view-all-link:hover {
-    background-color: var(--color-primary-dark);
+    margin-bottom: 15px;
+    gap: 20px;
 }
 
 /* Meeting Notes Archive */
@@ -451,11 +388,11 @@
     max-width: 900px;
     margin: 0 auto;
 }
+
 .post-type-archive-meeting_notes h1.page-title {
     margin-top: 30px;
     text-align: center;
 }
-
 
 .meeting-year {
     color: #1a1a1a;
@@ -474,104 +411,6 @@
     flex-direction: column;
     gap: 15px;
     margin-bottom: 40px;
-}
-
-/* Common Meeting Item Styles */
-.meeting-archive-item,
-.past-meeting-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 20px;
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 4px;
-    margin-bottom: 15px;
-    gap: 20px;
-}
-
-.meeting-info,
-.past-meeting-info {
-    flex: 1;
-}
-
-.meeting-meta {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
-}
-
-.meeting-date,
-.meeting-datetime {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    color: #666;
-    font-size: 0.95em;
-}
-
-.meeting-title {
-    margin: 0;
-    font-size: 1.1em;
-    font-weight: 600;
-    color: #1a1a1a;
-    line-height: 1.3;
-}
-
-.meeting-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 200px;
-}
-
-.view-agenda-link,
-.view-notes-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 8px 16px;
-    border-radius: 4px;
-    text-decoration: none;
-    transition: background-color 0.2s ease;
-    white-space: nowrap;
-    width: 100%;
-}
-
-.view-agenda-link {
-    background: #4CAF50;
-    color: white;
-}
-
-.view-agenda-link:hover {
-    background: #43A047;
-    color: white;
-}
-
-.view-notes-link {
-    background: #0073aa;
-    color: white;
-}
-
-.view-notes-link:hover {
-    background: #00a0d2;
-    color: white;
-}
-
-.notes-pending {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: #f0f0f1;
-    color: #666;
-    border-radius: 4px;
-    font-style: italic;
-    width: 100%;
 }
 
 /* Pagination */
@@ -647,111 +486,50 @@
         width: 100%;
         min-width: 0;
     }
-}
-
-.meeting-formats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 10px 0;
-}
-
-.meeting-format {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: #f0f0f1;
-    padding: 4px 8px;
-    border-radius: 3px;
-    font-size: 0.9em;
-    color: #1a1a1a;
-    white-space: nowrap;
-}
-
-.meeting-format .dashicons {
-    color: #2D8CFF;
-}
-
-/* Past meetings specific format styling */
-.past-meeting-item .meeting-formats {
-    margin: 5px 0 10px 0;
+        .meeting-actions .calendar-rsvp-links {
+            flex-direction:column;
+        }
 }
 
 @media (max-width: 600px) {
+    .meeting-header h2 {
+        font-size: 1.4em;
+    }
+
+    .meeting-details {
+        gap: 16px;
+    }
+
+    .meeting-datetime {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .meeting-date,
+    .meeting-time {
+        font-size: 1em;
+    }
+
+    .meeting-location {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .meeting-location-text {
+        flex: 1 1 100%;
+    }
+
+    .meeting-location .directions-link {
+        width: 100%;
+        justify-content: center;
+    }
+
     .meeting-formats {
         margin: 8px 0;
     }
 
     .meeting-format {
         font-size: 0.85em;
-    }
-}
-
-/* Zoom Meeting Info */
-.meeting-zoom-info {
-    background: #f9f9f9;
-    border: 1px solid #e5e5e5;
-    border-radius: 4px;
-    padding: 15px;
-    margin: 15px 0;
-}
-
-.meeting-zoom-info h3 {
-    margin: 0 0 15px 0;
-    padding: 0;
-    font-size: 1.1em;
-    color: #1a1a1a;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.zoom-details {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.zoom-link .join-zoom {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 8px 16px;
-    background: #2D8CFF;
-    color: #fff;
-    text-decoration: none;
-    border-radius: 3px;
-    font-size: 0.95em;
-    transition: background-color 0.2s ease;
-}
-
-.zoom-link .join-zoom:hover {
-    background: #2681F2;
-    color: #fff;
-}
-
-.zoom-credentials {
-    background: #fff;
-    padding: 12px;
-    border-radius: 3px;
-    border: 1px solid #e5e5e5;
-}
-
-.zoom-credentials p {
-    margin: 0 0 8px 0;
-    font-size: 0.95em;
-}
-
-.zoom-credentials p:last-child {
-    margin-bottom: 0;
-}
-
-.zoom-credentials strong {
-    color: #1a1a1a;
-}
-
-@media (max-width: 600px) {
-    .meeting-format {
         margin-top: 5px;
     }
 
@@ -763,6 +541,33 @@
         width: 100%;
         justify-content: center;
     }
+
+    .zoom-meta {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .meeting-resources {
+        flex-direction: column;
+    }
+
+    .resource-section {
+        width: 100%;
+    }
+
+    .resource-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Utility Classes */
+.dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    line-height: 1;
+    vertical-align: text-bottom;
 }
 
 /* Meeting Resources Section */
