@@ -168,6 +168,25 @@ class LCD_Meeting_Notes {
         add_action('meeting_location_edit_form_fields', array($this, 'meeting_location_edit_form_fields'));
         add_action('created_meeting_location', array($this, 'save_location_meta'));
         add_action('edited_meeting_location', array($this, 'save_location_meta'));
+
+        // Register Meeting Format Taxonomy
+        if (!taxonomy_exists('meeting_format')) {
+            register_taxonomy('meeting_format', 'meeting_notes', array(
+                'label'              => __('Meeting Format', 'lcd-meeting-notes'),
+                'labels'             => array(
+                    'name'              => __('Meeting Formats', 'lcd-meeting-notes'),
+                    'singular_name'     => __('Meeting Format', 'lcd-meeting-notes'),
+                    'add_new_item'      => __('Add New Meeting Format', 'lcd-meeting-notes'),
+                    'new_item_name'     => __('New Meeting Format', 'lcd-meeting-notes'),
+                    'edit_item'         => __('Edit Meeting Format', 'lcd-meeting-notes'),
+                    'update_item'       => __('Update Meeting Format', 'lcd-meeting-notes'),
+                ),
+                'hierarchical'       => true,
+                'show_ui'           => true,
+                'show_admin_column' => true,
+                'rewrite'           => array('slug' => 'meeting-format'),
+            ));
+        }
     }
 
     /**
@@ -231,6 +250,15 @@ class LCD_Meeting_Notes {
             'meeting_facebook',
             __('Facebook Event', 'lcd-meeting-notes'),
             array($this, 'meeting_facebook_callback'),
+            'meeting_notes',
+            'side',
+            'default'
+        );
+
+        add_meta_box(
+            'meeting_zoom',
+            __('Zoom Meeting Information', 'lcd-meeting-notes'),
+            array($this, 'meeting_zoom_callback'),
             'meeting_notes',
             'side',
             'default'
@@ -394,6 +422,70 @@ class LCD_Meeting_Notes {
     }
 
     /**
+     * Zoom meeting info callback
+     */
+    public function meeting_zoom_callback($post) {
+        $zoom_link = get_post_meta($post->ID, '_zoom_meeting_link', true);
+        $zoom_id = get_post_meta($post->ID, '_zoom_meeting_id', true);
+        $zoom_passcode = get_post_meta($post->ID, '_zoom_meeting_passcode', true);
+        $zoom_details = get_post_meta($post->ID, '_zoom_meeting_details', true);
+        ?>
+        <div class="zoom-meeting-wrapper">
+            <p>
+                <label for="zoom_meeting_link"><?php _e('Meeting Link:', 'lcd-meeting-notes'); ?></label>
+                <input type="url" 
+                       id="zoom_meeting_link" 
+                       name="zoom_meeting_link" 
+                       value="<?php echo esc_url($zoom_link); ?>" 
+                       class="widefat"
+                       placeholder="https://zoom.us/j/...">
+            </p>
+            <p>
+                <label for="zoom_meeting_id"><?php _e('Meeting ID:', 'lcd-meeting-notes'); ?></label>
+                <input type="text" 
+                       id="zoom_meeting_id" 
+                       name="zoom_meeting_id" 
+                       value="<?php echo esc_attr($zoom_id); ?>" 
+                       class="widefat"
+                       placeholder="123 4567 8901">
+            </p>
+            <p>
+                <label for="zoom_meeting_passcode"><?php _e('Passcode:', 'lcd-meeting-notes'); ?></label>
+                <input type="text" 
+                       id="zoom_meeting_passcode" 
+                       name="zoom_meeting_passcode" 
+                       value="<?php echo esc_attr($zoom_passcode); ?>" 
+                       class="widefat"
+                       placeholder="123456">
+            </p>
+            <p>
+                <label for="zoom_meeting_details"><?php _e('Additional Details:', 'lcd-meeting-notes'); ?></label>
+                <textarea id="zoom_meeting_details" 
+                         name="zoom_meeting_details" 
+                         class="widefat" 
+                         rows="3" 
+                         placeholder="<?php _e('Phone numbers, additional instructions, etc.', 'lcd-meeting-notes'); ?>"><?php echo esc_textarea($zoom_details); ?></textarea>
+            </p>
+        </div>
+
+        <style>
+            .zoom-meeting-wrapper label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: 600;
+            }
+            .zoom-meeting-wrapper input,
+            .zoom-meeting-wrapper textarea {
+                margin-bottom: 10px;
+            }
+            .zoom-meeting-wrapper textarea {
+                resize: vertical;
+            }
+        </style>
+        <?php
+    }
+
+    /**
      * Add date field after title
      */
     public function add_date_field($post) {
@@ -506,6 +598,26 @@ class LCD_Meeting_Notes {
             if (empty($facebook_url) || wp_http_validate_url($facebook_url)) {
                 update_post_meta($post_id, '_facebook_event_url', $facebook_url);
             }
+        }
+
+        // Save Zoom meeting info
+        if (isset($_POST['zoom_meeting_link'])) {
+            $zoom_link = esc_url_raw($_POST['zoom_meeting_link']);
+            if (empty($zoom_link) || wp_http_validate_url($zoom_link)) {
+                update_post_meta($post_id, '_zoom_meeting_link', $zoom_link);
+            }
+        }
+
+        if (isset($_POST['zoom_meeting_id'])) {
+            update_post_meta($post_id, '_zoom_meeting_id', sanitize_text_field($_POST['zoom_meeting_id']));
+        }
+
+        if (isset($_POST['zoom_meeting_passcode'])) {
+            update_post_meta($post_id, '_zoom_meeting_passcode', sanitize_text_field($_POST['zoom_meeting_passcode']));
+        }
+
+        if (isset($_POST['zoom_meeting_details'])) {
+            update_post_meta($post_id, '_zoom_meeting_details', sanitize_textarea_field($_POST['zoom_meeting_details']));
         }
 
         // Check if we're trying to publish

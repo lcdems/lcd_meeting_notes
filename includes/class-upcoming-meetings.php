@@ -112,6 +112,12 @@ class LCD_Upcoming_Meetings {
             return $term->name;
         }, $meeting_types);
 
+        // Get meeting formats
+        $meeting_formats = wp_get_object_terms($meeting->ID, 'meeting_format');
+        $format_names = array_map(function($term) {
+            return $term->name;
+        }, $meeting_formats);
+
         // Prepare event details
         $title = implode(' & ', $type_names) . ' Meeting';
         $description = wp_strip_all_tags($meeting->post_content);
@@ -170,7 +176,7 @@ class LCD_Upcoming_Meetings {
         $args = array(
             'post_type' => 'meeting_notes',
             'post_status' => 'publish',
-            'posts_per_page' => 10,
+            'posts_per_page' => 3,
             'meta_query' => array(
                 array(
                     'key' => '_meeting_date',
@@ -233,6 +239,12 @@ class LCD_Upcoming_Meetings {
                 return $term->name;
             }, $meeting_types);
 
+            // Get meeting formats
+            $meeting_formats = wp_get_object_terms($meeting->ID, 'meeting_format');
+            $format_names = array_map(function($term) {
+                return $term->name;
+            }, $meeting_formats);
+
             // Build output
             $output .= '<div class="upcoming-meeting">';
             
@@ -244,6 +256,15 @@ class LCD_Upcoming_Meetings {
             $output .= '<div class="meeting-date"><i class="dashicons dashicons-calendar-alt"></i> ' . $formatted_date . '</div>';
             $output .= '<div class="meeting-time"><i class="dashicons dashicons-clock"></i> ' . $formatted_time . '</div>';
             $output .= '</div>';
+
+            // Meeting formats
+            if (!empty($format_names)) {
+                $output .= '<div class="meeting-formats">';
+                foreach ($format_names as $format) {
+                    $output .= '<span class="meeting-format"><i class="dashicons dashicons-format-status"></i> ' . esc_html($format) . '</span>';
+                }
+                $output .= '</div>';
+            }
 
             if ($location) {
                 $output .= '<div class="meeting-location">';
@@ -260,33 +281,63 @@ class LCD_Upcoming_Meetings {
                 }
                 $output .= '</div>';
             }
+
             $output .= '</div>'; // End meeting-details
             $output .= '</div>'; // End meeting-header
-
-            // Agenda section
-            $output .= '<div class="meeting-agenda-section">';
-            $output .= '<h3><i class="dashicons dashicons-media-document"></i> ' . __('Meeting Agenda', 'lcd-meeting-notes') . '</h3>';
-            if (!empty($agenda_pdf_id)) {
-                $pdf_url = wp_get_attachment_url($agenda_pdf_id);
-                if ($pdf_url) {
-                    $output .= '<div class="agenda-available">';
-                    $output .= '<a href="' . esc_url($pdf_url) . '" class="button view-agenda" target="_blank">';
-                    $output .= '<i class="dashicons dashicons-pdf"></i> ' . __('View Agenda PDF', 'lcd-meeting-notes');
-                    $output .= '</a>';
-                    $output .= '</div>';
-                }
-            } else {
-                $output .= '<div class="agenda-pending">';
-                $output .= '<i class="dashicons dashicons-clock"></i> ' . __('Agenda pending - check back soon', 'lcd-meeting-notes');
-                $output .= '</div>';
-            }
-            $output .= '</div>'; // End meeting-agenda-section
 
             if (!empty($meeting->post_content)) {
                 $output .= '<div class="meeting-description">';
                 $output .= apply_filters('the_content', $meeting->post_content);
                 $output .= '</div>';
             }
+
+            // Combined Meeting Resources Section
+            $output .= '<div class="meeting-resources">';
+            
+            // Left side - Agenda
+            $output .= '<div class="resource-section agenda-section">';
+            if (!empty($agenda_pdf_id)) {
+                $pdf_url = wp_get_attachment_url($agenda_pdf_id);
+                if ($pdf_url) {
+                    $output .= '<a href="' . esc_url($pdf_url) . '" class="resource-button view-agenda" target="_blank">';
+                    $output .= '<i class="dashicons dashicons-pdf"></i> ' . __('View Agenda PDF', 'lcd-meeting-notes');
+                    $output .= '</a>';
+                }
+            } else {
+                $output .= '<div class="agenda-pending">';
+                $output .= '<i class="dashicons dashicons-clock"></i> ' . __('Agenda pending', 'lcd-meeting-notes');
+                $output .= '</div>';
+            }
+            $output .= '</div>';
+
+            // Right side - Zoom (if available)
+            $zoom_link = get_post_meta($meeting->ID, '_zoom_meeting_link', true);
+            $zoom_id = get_post_meta($meeting->ID, '_zoom_meeting_id', true);
+            $zoom_passcode = get_post_meta($meeting->ID, '_zoom_meeting_passcode', true);
+            $zoom_details = get_post_meta($meeting->ID, '_zoom_meeting_details', true);
+
+            if (!empty($zoom_link) || !empty($zoom_id)) {
+                $output .= '<div class="resource-section zoom-section">';
+                if (!empty($zoom_link)) {
+                    $output .= '<a href="' . esc_url($zoom_link) . '" class="resource-button join-zoom" target="_blank">';
+                    $output .= '<i class="dashicons dashicons-video-alt3"></i> ' . __('Join Zoom Meeting', 'lcd-meeting-notes');
+                    $output .= '</a>';
+                }
+                if (!empty($zoom_id)) {
+                    $output .= '<div class="zoom-meta">';
+                    $output .= '<span class="zoom-id"><strong>' . __('ID:', 'lcd-meeting-notes') . '</strong> ' . esc_html($zoom_id) . '</span>';
+                    if (!empty($zoom_passcode)) {
+                        $output .= '<span class="zoom-passcode"><strong>' . __('Passcode:', 'lcd-meeting-notes') . '</strong> ' . esc_html($zoom_passcode) . '</span>';
+                    }
+                    $output .= '</div>';
+                }
+                if (!empty($zoom_details)) {
+                    $output .= '<div class="zoom-details-text">' . nl2br(esc_html($zoom_details)) . '</div>';
+                }
+                $output .= '</div>';
+            }
+            
+            $output .= '</div>'; // End meeting-resources
 
             // Meeting actions
             $output .= '<div class="meeting-actions">';
@@ -345,6 +396,12 @@ class LCD_Upcoming_Meetings {
                 $type_names = array_map(function($term) {
                     return $term->name;
                 }, $meeting_types);
+
+                // Get meeting formats
+                $meeting_formats = wp_get_object_terms($past_meeting->ID, 'meeting_format');
+                $format_names = array_map(function($term) {
+                    return $term->name;
+                }, $meeting_formats);
                 
                 $output .= '<div class="past-meeting-item">';
                 $output .= '<div class="past-meeting-info">';
@@ -352,6 +409,16 @@ class LCD_Upcoming_Meetings {
                 $output .= '<span class="meeting-date"><i class="dashicons dashicons-calendar-alt"></i> ' . $formatted_date . '</span>';
                 $output .= '<span class="meeting-datetime"><i class="dashicons dashicons-clock"></i> ' . $formatted_time . '</span>';
                 $output .= '</div>';
+                
+                // Meeting formats
+                if (!empty($format_names)) {
+                    $output .= '<div class="meeting-formats">';
+                    foreach ($format_names as $format) {
+                        $output .= '<span class="meeting-format"><i class="dashicons dashicons-format-status"></i> ' . esc_html($format) . '</span>';
+                    }
+                    $output .= '</div>';
+                }
+
                 $output .= '<h3 class="meeting-title">' . implode(' & ', $type_names) . ' Meeting</h3>';
                 $output .= '</div>';
                 
