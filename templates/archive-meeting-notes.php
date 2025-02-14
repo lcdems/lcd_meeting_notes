@@ -100,6 +100,16 @@ get_header(); ?>
                                             <?php _e('Meeting notes pending', 'lcd-meeting-notes'); ?>
                                         </span>
                                     <?php endif; ?>
+
+                                    <?php
+                                    // YouTube Recording
+                                    $youtube_url = get_post_meta(get_the_ID(), '_meeting_youtube_url', true);
+                                    if (!empty($youtube_url)) : ?>
+                                        <a href="<?php echo esc_url($youtube_url); ?>" class="view-recording-link" target="_blank">
+                                            <i class="dashicons dashicons-video-alt3"></i>
+                                            <?php _e('Watch Recording', 'lcd-meeting-notes'); ?>
+                                        </a>
+                                    <?php endif; ?>
                                 </div>
                             </div>
 

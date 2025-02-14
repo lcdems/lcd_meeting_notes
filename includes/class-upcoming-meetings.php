@@ -23,14 +23,6 @@ class LCD_Upcoming_Meetings {
             '1.0.0'
         );
 
-        wp_enqueue_script(
-            'lcd-meetings-tabs',
-            plugins_url('assets/js/meetings-tabs.js', dirname(__FILE__)),
-            array('jquery'),
-            '1.0.0',
-            true
-        );
-
         wp_enqueue_style('dashicons');
     }
 
@@ -202,17 +194,16 @@ class LCD_Upcoming_Meetings {
     public function render_upcoming_meeting($atts) {
         $output = '<div class="lcd-meetings-tabs">';
         
-        // Tabs navigation
-        $output .= '<div class="lcd-meetings-tabs-nav">';
-        $output .= '<button class="tab-button active" data-tab="upcoming">' . __('Upcoming Meeting', 'lcd-meeting-notes') . '</button>';
-        $output .= '<button class="tab-button" data-tab="past">' . __('Past Meetings', 'lcd-meeting-notes') . '</button>';
+        // Header with title and archive link
+        $output .= '<div class="meetings-header">';
+        $output .= '<h2>' . __('Next Meeting', 'lcd-meeting-notes') . '</h2>';
+        $archive_url = get_post_type_archive_link('meeting_notes');
+        $output .= '<a href="' . esc_url($archive_url) . '" class="view-past-meetings">';
+        $output .= '<i class="dashicons dashicons-calendar"></i> ' . __('View Past Meetings', 'lcd-meeting-notes');
+        $output .= '</a>';
         $output .= '</div>';
         
-        // Tabs content
-        $output .= '<div class="lcd-meetings-tabs-content">';
-        
-        // Upcoming Meeting Tab
-        $output .= '<div class="tab-content active" id="upcoming-tab">';
+        // Meeting content
         $meeting = $this->get_next_meeting();
         
         if (!$meeting) {
@@ -372,97 +363,7 @@ class LCD_Upcoming_Meetings {
             $output .= '</div>'; // End meeting-actions
             $output .= '</div>'; // End upcoming-meeting
         }
-        $output .= '</div>'; // End upcoming-tab
         
-        // Past Meetings Tab
-        $output .= '<div class="tab-content" id="past-tab">';
-        $past_meetings = $this->get_past_meetings();
-        
-        if (empty($past_meetings)) {
-            $output .= '<div class="no-past-meetings">' . 
-                       __('No past meetings found.', 'lcd-meeting-notes') . 
-                       '</div>';
-        } else {
-            $output .= '<div class="past-meetings-list">';
-            foreach ($past_meetings as $past_meeting) {
-                $meeting_date = get_post_meta($past_meeting->ID, '_meeting_date', true);
-                $meeting_time = get_post_meta($past_meeting->ID, '_meeting_time', true);
-                $notes_pdf_id = get_post_meta($past_meeting->ID, '_meeting_notes_pdf', true);
-                
-                $datetime = new DateTime($meeting_date . ' ' . $meeting_time);
-                $formatted_date = $datetime->format('F j, Y');
-                $formatted_time = $datetime->format('g:i A');
-
-                // Get meeting types
-                $meeting_types = wp_get_object_terms($past_meeting->ID, 'meeting_type');
-                $type_names = array_map(function($term) {
-                    return $term->name;
-                }, $meeting_types);
-
-                // Get meeting formats
-                $meeting_formats = wp_get_object_terms($past_meeting->ID, 'meeting_format');
-                $format_names = array_map(function($term) {
-                    return $term->name;
-                }, $meeting_formats);
-                
-                $output .= '<div class="past-meeting-item">';
-                $output .= '<div class="past-meeting-info">';
-                $output .= '<div class="meeting-meta">';
-                $output .= '<span class="meeting-date"><i class="dashicons dashicons-calendar-alt"></i> ' . $formatted_date . '</span>';
-                $output .= '<span class="meeting-datetime"><i class="dashicons dashicons-clock"></i> ' . $formatted_time . '</span>';
-                $output .= '</div>';
-                
-                // Meeting formats
-                if (!empty($format_names)) {
-                    $output .= '<div class="meeting-formats">';
-                    foreach ($format_names as $format) {
-                        $output .= '<span class="meeting-format"><i class="dashicons dashicons-format-status"></i> ' . esc_html($format) . '</span>';
-                    }
-                    $output .= '</div>';
-                }
-
-                $output .= '<h3 class="meeting-title">' . implode(' & ', $type_names) . ' Meeting</h3>';
-                $output .= '</div>';
-                
-                $output .= '<div class="meeting-actions">';
-                // Check for agenda PDF
-                $agenda_pdf_id = get_post_meta($past_meeting->ID, '_meeting_agenda_pdf', true);
-                if (!empty($agenda_pdf_id)) {
-                    $agenda_url = wp_get_attachment_url($agenda_pdf_id);
-                    if ($agenda_url) {
-                        $output .= '<a href="' . esc_url($agenda_url) . '" class="view-agenda-link" target="_blank">';
-                        $output .= '<i class="dashicons dashicons-media-document"></i> ' . __('View Agenda', 'lcd-meeting-notes');
-                        $output .= '</a>';
-                    }
-                }
-
-                // Meeting Notes
-                if (!empty($notes_pdf_id)) {
-                    $pdf_url = wp_get_attachment_url($notes_pdf_id);
-                    if ($pdf_url) {
-                        $output .= '<a href="' . esc_url($pdf_url) . '" class="view-notes-link" target="_blank">';
-                        $output .= '<i class="dashicons dashicons-pdf"></i> ' . __('View Meeting Notes', 'lcd-meeting-notes');
-                        $output .= '</a>';
-                    }
-                } else {
-                    $output .= '<span class="notes-pending">' . __('Meeting notes pending', 'lcd-meeting-notes') . '</span>';
-                }
-                $output .= '</div>';
-                $output .= '</div>';
-            }
-            $output .= '</div>'; // End past-meetings-list
-
-            // Add View All Past Meetings link
-            $archive_url = get_post_type_archive_link('meeting_notes');
-            $output .= '<div class="view-all-meetings">';
-            $output .= '<a href="' . esc_url($archive_url) . '" class="view-all-link">';
-            $output .= '<i class="dashicons dashicons-calendar"></i> ' . __('View All Past Meetings', 'lcd-meeting-notes');
-            $output .= '</a>';
-            $output .= '</div>';
-        }
-        $output .= '</div>'; // End past-tab
-        
-        $output .= '</div>'; // End lcd-meetings-tabs-content
         $output .= '</div>'; // End lcd-meetings-tabs
 
         return $output;

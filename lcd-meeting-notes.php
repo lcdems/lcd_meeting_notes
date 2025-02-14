@@ -247,6 +247,15 @@ class LCD_Meeting_Notes {
         );
 
         add_meta_box(
+            'meeting_youtube',
+            __('Meeting Recording', 'lcd-meeting-notes'),
+            array($this, 'meeting_youtube_callback'),
+            'meeting_notes',
+            'side',
+            'default'
+        );
+
+        add_meta_box(
             'meeting_facebook',
             __('Facebook Event', 'lcd-meeting-notes'),
             array($this, 'meeting_facebook_callback'),
@@ -378,6 +387,46 @@ class LCD_Meeting_Notes {
                 </div>
             </div>
         </div>
+        <?php
+    }
+
+    /**
+     * YouTube link callback
+     */
+    public function meeting_youtube_callback($post) {
+        $youtube_url = get_post_meta($post->ID, '_meeting_youtube_url', true);
+        ?>
+        <div class="youtube-link-wrapper">
+            <p>
+                <label for="meeting_youtube_url"><?php _e('YouTube Recording URL:', 'lcd-meeting-notes'); ?></label>
+                <input type="url" 
+                       id="meeting_youtube_url" 
+                       name="meeting_youtube_url" 
+                       value="<?php echo esc_url($youtube_url); ?>" 
+                       class="widefat"
+                       placeholder="https://youtube.com/watch?v=...">
+            </p>
+            <?php if (!empty($youtube_url)): ?>
+                <p>
+                    <a href="<?php echo esc_url($youtube_url); ?>" 
+                       class="button" 
+                       target="_blank">
+                        <?php _e('View Recording', 'lcd-meeting-notes'); ?>
+                    </a>
+                </p>
+            <?php endif; ?>
+        </div>
+
+        <style>
+            .youtube-link-wrapper label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: 600;
+            }
+            .youtube-link-wrapper .button {
+                margin-top: 8px;
+            }
+        </style>
         <?php
     }
 
@@ -574,6 +623,14 @@ class LCD_Meeting_Notes {
         // Save meeting time
         if (isset($_POST['meeting_time'])) {
             update_post_meta($post_id, '_meeting_time', sanitize_text_field($_POST['meeting_time']));
+        }
+
+        // Save YouTube URL
+        if (isset($_POST['meeting_youtube_url'])) {
+            $youtube_url = esc_url_raw($_POST['meeting_youtube_url']);
+            if (empty($youtube_url) || wp_http_validate_url($youtube_url)) {
+                update_post_meta($post_id, '_meeting_youtube_url', $youtube_url);
+            }
         }
 
         // Save agenda PDF ID

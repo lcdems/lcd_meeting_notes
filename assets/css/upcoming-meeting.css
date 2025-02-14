@@ -119,6 +119,7 @@
 /* Common Button/Link Styles */
 .view-agenda-link,
 .view-notes-link,
+.view-recording-link,
 .calendar-link,
 .facebook-rsvp,
 .resource-button {
@@ -154,6 +155,16 @@
 
 .view-notes-link:hover {
     background: #00a0d2;
+    color: white;
+}
+
+.view-recording-link {
+    background: #cc0000;
+    color: white;
+}
+
+.view-recording-link:hover {
+    background: #b30000;
     color: white;
 }
 
@@ -320,14 +331,47 @@
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 4px;
+    padding: 20px;
     margin-bottom: 20px;
 }
 
-.lcd-meetings-tabs-nav {
+.meetings-header {
     display: flex;
-    border-bottom: 1px solid #ddd;
-    background: #f8f8f8;
-    border-radius: 4px 4px 0 0;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.meetings-header h2 {
+    margin: 0;
+    font-size: 1.5em;
+    color: #333;
+}
+
+.view-past-meetings {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #555;
+    transition: all 0.2s ease;
+}
+
+.view-past-meetings:hover {
+    background: #eee;
+    color: #333;
+    text-decoration: none;
+}
+
+.view-past-meetings .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
 }
 
 .tab-button {
