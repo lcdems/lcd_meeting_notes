@@ -45,6 +45,8 @@ class LCD_Meeting_Notes {
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('wp_ajax_upload_agenda_pdf', array($this, 'handle_file_upload'));
         add_action('wp_ajax_upload_meeting_notes', array($this, 'handle_file_upload'));
+        add_action('wp_ajax_rsvp_meeting', array($this, 'handle_rsvp'));
+        add_action('wp_ajax_nopriv_rsvp_meeting', array($this, 'handle_rsvp'));
         add_action('edit_form_after_title', array($this, 'add_date_field'));
         add_action('admin_notices', array($this, 'show_validation_notice'));
         add_action('template_redirect', array($this, 'handle_single_meeting_redirect'));
@@ -912,6 +914,59 @@ class LCD_Meeting_Notes {
                 '_meeting_time' => 'DESC'
             ));
             $query->set('meta_key', '_meeting_date');
+        }
+    }
+
+    /**
+     * Handle RSVP AJAX requests
+     */
+    public function handle_rsvp() {
+        check_ajax_referer('lcd_rsvp_nonce', 'nonce');
+
+        $meeting_id = isset($_POST['meeting_id']) ? intval($_POST['meeting_id']) : 0;
+        $action = isset($_POST['rsvp_action']) ? sanitize_text_field($_POST['rsvp_action']) : '';
+        $ip_address = sanitize_text_field($_SERVER['REMOTE_ADDR']);
+
+        if (!$meeting_id || !in_array($action, array('add', 'remove'))) {
+            wp_send_json_error(array('message' => __('Invalid request', 'lcd-meeting-notes')));
+        }
+
+        // Get current RSVPs
+        $rsvps = get_post_meta($meeting_id, '_meeting_rsvps', true);
+        if (!is_array($rsvps)) {
+            $rsvps = array();
+        }
+
+        // Check if user has already RSVPed
+        $cookie_name = 'lcd_meeting_rsvp_' . $meeting_id;
+        $has_rsvped = isset($_COOKIE[$cookie_name]);
+
+        if ($action === 'add' && !$has_rsvped) {
+            // Add RSVP
+            $rsvps[$ip_address] = current_time('mysql');
+            update_post_meta($meeting_id, '_meeting_rsvps', $rsvps);
+            
+            // Set cookie to expire in 30 days
+            setcookie($cookie_name, '1', time() + (30 * DAY_IN_SECONDS), '/');
+            
+            wp_send_json_success(array(
+                'message' => __('RSVP successful', 'lcd-meeting-notes'),
+                'count' => count($rsvps)
+            ));
+        } elseif ($action === 'remove' && $has_rsvped) {
+            // Remove RSVP
+            unset($rsvps[$ip_address]);
+            update_post_meta($meeting_id, '_meeting_rsvps', $rsvps);
+            
+            // Remove cookie
+            setcookie($cookie_name, '', time() - 3600, '/');
+            
+            wp_send_json_success(array(
+                'message' => __('RSVP removed', 'lcd-meeting-notes'),
+                'count' => count($rsvps)
+            ));
+        } else {
+            wp_send_json_error(array('message' => __('You have already RSVPed to this meeting', 'lcd-meeting-notes')));
         }
     }
 

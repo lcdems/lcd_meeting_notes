@@ -24,6 +24,25 @@ class LCD_Upcoming_Meetings {
         );
 
         wp_enqueue_style('dashicons');
+
+        // Add JavaScript for RSVP functionality
+        wp_enqueue_script(
+            'lcd-meeting-rsvp',
+            plugins_url('assets/js/meeting-rsvp.js', dirname(__FILE__)),
+            array('jquery'),
+            '1.0.0',
+            true
+        );
+
+        wp_localize_script('lcd-meeting-rsvp', 'lcdRsvp', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('lcd_rsvp_nonce'),
+            'messages' => array(
+                'success' => __('RSVP successful!', 'lcd-meeting-notes'),
+                'removed' => __('RSVP removed', 'lcd-meeting-notes'),
+                'error' => __('Error processing RSVP', 'lcd-meeting-notes')
+            )
+        ));
     }
 
     /**
@@ -189,6 +208,24 @@ class LCD_Upcoming_Meetings {
     }
 
     /**
+     * Get RSVP count and status for a meeting
+     */
+    private function get_rsvp_info($meeting_id) {
+        $rsvps = get_post_meta($meeting_id, '_meeting_rsvps', true);
+        if (!is_array($rsvps)) {
+            $rsvps = array();
+        }
+
+        $cookie_name = 'lcd_meeting_rsvp_' . $meeting_id;
+        $has_rsvped = isset($_COOKIE[$cookie_name]);
+
+        return array(
+            'count' => count($rsvps),
+            'has_rsvped' => $has_rsvped
+        );
+    }
+
+    /**
      * Render the upcoming meeting shortcode
      */
     public function render_upcoming_meeting($atts) {
@@ -335,19 +372,48 @@ class LCD_Upcoming_Meetings {
             // Meeting actions
             $output .= '<div class="meeting-actions">';
             
+            // RSVP count display
+            $rsvp_info = $this->get_rsvp_info($meeting->ID);
+            $output .= '<div class="rsvp-count" data-meeting-id="' . esc_attr($meeting->ID) . '">';
+            $output .= '<i class="dashicons dashicons-groups"></i> ';
+            if ($rsvp_info['has_rsvped']) {
+                if ($rsvp_info['count'] > 1) {
+                    $output .= __('You, plus ' . ($rsvp_info['count'] - 1) . ' others have RSVP\'d', 'lcd-meeting-notes');
+                } else {
+                    $output .= __('You are the first to RSVP', 'lcd-meeting-notes');
+                }
+            } else {
+                $output .= sprintf(_n('%s person has RSVP\'d', '%s people have RSVP\'d', $rsvp_info['count'], 'lcd-meeting-notes'), 
+                    $rsvp_info['count']);
+            }
+            $output .= '</div>';
+            
             // Calendar and RSVP links wrapper
             $output .= '<div class="calendar-rsvp-links">';
+            
+            // RSVP Button
+            $output .= '<div class="meeting-rsvp-section">';
+            if ($rsvp_info['has_rsvped']) {
+                $output .= '<button type="button" class="rsvp-button remove-rsvp" data-meeting-id="' . esc_attr($meeting->ID) . '">';
+                $output .= '<i class="dashicons dashicons-no-alt"></i> ' . __('Cancel RSVP', 'lcd-meeting-notes');
+                $output .= '</button>';
+            } else {
+                $output .= '<button type="button" class="rsvp-button add-rsvp" data-meeting-id="' . esc_attr($meeting->ID) . '">';
+                $output .= '<i class="dashicons dashicons-yes"></i> ' . __('RSVP Now', 'lcd-meeting-notes');
+                $output .= '</button>';
+            }
+            $output .= '</div>';
             
             // Calendar links
             if (!empty($calendar_links)) {
                 if (isset($calendar_links['google'])) {
                     $output .= '<a href="' . esc_url($calendar_links['google']) . '" class="calendar-link google" target="_blank">';
-                    $output .= '<i class="dashicons dashicons-calendar-alt"></i> ' . __('Add to Google Calendar', 'lcd-meeting-notes');
+                    $output .= '<i class="dashicons dashicons-calendar-alt"></i> ' . __('Google Calendar', 'lcd-meeting-notes');
                     $output .= '</a>';
                 }
                 if (isset($calendar_links['apple'])) {
                     $output .= '<a href="' . esc_url($calendar_links['apple']) . '" class="calendar-link apple" download="meeting.ics">';
-                    $output .= '<i class="dashicons dashicons-calendar-alt"></i> ' . __('Add to Apple Calendar', 'lcd-meeting-notes');
+                    $output .= '<i class="dashicons dashicons-calendar-alt"></i> ' . __('Apple Calendar', 'lcd-meeting-notes');
                     $output .= '</a>';
                 }
             }
@@ -355,7 +421,7 @@ class LCD_Upcoming_Meetings {
             // Facebook RSVP button
             if (!empty($facebook_url)) {
                 $output .= '<a href="' . esc_url($facebook_url) . '" class="facebook-rsvp" target="_blank">';
-                $output .= '<i class="dashicons dashicons-facebook"></i> RSVP on Facebook';
+                $output .= '<i class="dashicons dashicons-facebook"></i> ' . __('RSVP on Facebook', 'lcd-meeting-notes');
                 $output .= '</a>';
             }
             

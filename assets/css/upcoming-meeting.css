@@ -105,79 +105,75 @@
 .meeting-actions {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    min-width: 200px;
-    border-top: 1px solid #ddd;
-    padding-top: 20px;
+    gap: 15px;
     margin-top: 20px;
-}
-.meeting-actions .calendar-rsvp-links {
-    display: flex;
-    gap: 8px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
 }
 
-/* Common Button/Link Styles */
-.view-agenda-link,
-.view-notes-link,
-.view-recording-link,
+.calendar-rsvp-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+/* Common Button Styles */
+.rsvp-button,
 .calendar-link,
-.facebook-rsvp,
-.resource-button {
+.facebook-rsvp {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     padding: 8px 16px;
     border-radius: 4px;
+    border: none;
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: all 0.2s ease;
     text-decoration: none;
-    transition: background-color 0.2s ease;
-    white-space: nowrap;
-    width: 100%;
-    font-size: 0.9em;
+    font-weight: 500;
+    height: 40px;
 }
 
-.view-agenda-link,
-.view-agenda {
+/* RSVP Button Styles */
+.rsvp-button.add-rsvp {
     background: #4CAF50;
     color: white;
 }
 
-.view-agenda-link:hover,
-.view-agenda:hover {
+.rsvp-button.add-rsvp:hover {
     background: #43A047;
+}
+
+.rsvp-button.remove-rsvp {
+    background: #f44336;
     color: white;
 }
 
-.view-notes-link {
-    background: #0073aa;
-    color: white;
+.rsvp-button.remove-rsvp:hover {
+    background: #e53935;
 }
 
-.view-notes-link:hover {
-    background: #00a0d2;
-    color: white;
+.rsvp-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 
-.view-recording-link {
-    background: #cc0000;
-    color: white;
-}
-
-.view-recording-link:hover {
-    background: #b30000;
-    color: white;
-}
-
+/* Calendar Link Styles */
 .calendar-link {
     background: #f0f0f1;
     color: #1a1a1a;
+    border: 1px solid #ddd;
 }
 
 .calendar-link:hover {
     background: #e5e5e5;
     color: #1a1a1a;
+    text-decoration: none;
 }
 
+/* Facebook RSVP Button */
 .facebook-rsvp {
     background: #1877f2;
     color: #fff;
@@ -186,6 +182,66 @@
 .facebook-rsvp:hover {
     background: #166fe5;
     color: #fff;
+    text-decoration: none;
+}
+
+/* Message Styles */
+.rsvp-message {
+    position: absolute;
+    bottom: -30px;
+    left: 0;
+    right: 0;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.rsvp-message.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+}
+
+.rsvp-message.error {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+}
+
+.rsvp-message.info {
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #90caf9;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .calendar-rsvp-links {
+        grid-template-columns: 1fr;
+    }
+    
+    .rsvp-button,
+    .calendar-link,
+    .facebook-rsvp {
+        width: 100%;
+    }
+    
+    .meeting-rsvp-section {
+        margin-bottom: 25px;
+    }
 }
 
 /* Meeting Formats */
@@ -717,5 +773,131 @@
     .zoom-meta {
         flex-direction: column;
         gap: 8px;
+    }
+}
+
+/* RSVP Section */
+.meeting-rsvp-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+}
+
+.rsvp-count {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.rsvp-count .dashicons {
+    color: #2D8CFF;
+}
+
+/* Meeting RSVP Section */
+.meeting-rsvp-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.rsvp-count {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.rsvp-count .dashicons {
+    color: #2D8CFF;
+}
+
+.rsvp-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 4px;
+    border: none;
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.rsvp-button.add-rsvp {
+    background: #4CAF50;
+    color: white;
+}
+
+.rsvp-button.add-rsvp:hover {
+    background: #43A047;
+}
+
+.rsvp-button.remove-rsvp {
+    background: #f44336;
+    color: white;
+}
+
+.rsvp-button.remove-rsvp:hover {
+    background: #e53935;
+}
+
+.rsvp-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.rsvp-message {
+    position: absolute;
+    bottom: -30px;
+    left: 0;
+    right: 0;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.rsvp-message.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+}
+
+.rsvp-message.error {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+}
+
+.rsvp-message.info {
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #90caf9;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 600px) {
+    .meeting-rsvp-section {
+        margin-bottom: 20px;
     }
 } 
