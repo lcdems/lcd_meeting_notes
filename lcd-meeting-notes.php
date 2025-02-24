@@ -249,6 +249,15 @@ class LCD_Meeting_Notes {
         );
 
         add_meta_box(
+            'meeting_rsvp',
+            __('RSVP Management', 'lcd-meeting-notes'),
+            array($this, 'meeting_rsvp_callback'),
+            'meeting_notes',
+            'side',
+            'default'
+        );
+
+        add_meta_box(
             'meeting_youtube',
             __('Meeting Recording', 'lcd-meeting-notes'),
             array($this, 'meeting_youtube_callback'),
@@ -389,6 +398,67 @@ class LCD_Meeting_Notes {
                 </div>
             </div>
         </div>
+        <?php
+    }
+
+    /**
+     * RSVP management callback
+     */
+    public function meeting_rsvp_callback($post) {
+        $rsvps = get_post_meta($post->ID, '_meeting_rsvps', true);
+        if (!is_array($rsvps)) {
+            $rsvps = array();
+        }
+        $count = count($rsvps);
+        ?>
+        <div class="rsvp-management-wrapper">
+            <p>
+                <label for="rsvp_count"><strong><?php _e('Current RSVP Count:', 'lcd-meeting-notes'); ?></strong></label>
+                <input type="number" 
+                       id="rsvp_count" 
+                       name="rsvp_count" 
+                       value="<?php echo esc_attr($count); ?>" 
+                       class="small-text"
+                       min="0"
+                       style="width: 80px;">
+            </p>
+            <?php if ($count > 0): ?>
+                <p class="description">
+                    <?php 
+                    printf(
+                        _n(
+                            '%s person has RSVP\'d to this meeting', 
+                            '%s people have RSVP\'d to this meeting', 
+                            $count, 
+                            'lcd-meeting-notes'
+                        ), 
+                        number_format_i18n($count)
+                    ); 
+                    ?>
+                </p>
+                <p class="description">
+                    <?php _e('Last RSVP:', 'lcd-meeting-notes'); ?>
+                    <?php echo esc_html(end($rsvps)); ?>
+                </p>
+            <?php endif; ?>
+            <p class="description">
+                <?php _e('Manually adjust the RSVP count if needed. This will reset the IP tracking.', 'lcd-meeting-notes'); ?>
+            </p>
+        </div>
+
+        <style>
+            .rsvp-management-wrapper label {
+                display: inline-block;
+                margin-bottom: 5px;
+            }
+            .rsvp-management-wrapper input[type="number"] {
+                margin-left: 10px;
+            }
+            .rsvp-management-wrapper .description {
+                margin-top: 8px;
+                font-style: italic;
+            }
+        </style>
         <?php
     }
 
@@ -677,6 +747,22 @@ class LCD_Meeting_Notes {
 
         if (isset($_POST['zoom_meeting_details'])) {
             update_post_meta($post_id, '_zoom_meeting_details', sanitize_textarea_field($_POST['zoom_meeting_details']));
+        }
+
+        // Save RSVP count
+        if (isset($_POST['rsvp_count'])) {
+            $count = max(0, intval($_POST['rsvp_count']));
+            $rsvps = array();
+            
+            // If count is greater than 0, create dummy entries
+            if ($count > 0) {
+                $current_time = current_time('mysql');
+                for ($i = 0; $i < $count; $i++) {
+                    $rsvps['manual_' . $i] = $current_time;
+                }
+            }
+            
+            update_post_meta($post_id, '_meeting_rsvps', $rsvps);
         }
 
         // Check if we're trying to publish
